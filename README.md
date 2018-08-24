@@ -47,5 +47,17 @@ http://mathworld.wolfram.com/CramersRule.html
 
 There are a few ways to calculate line/line intersection including the 'slope + y intercept' form you learned in school or something called 'parametric' form.
 
-Credits:
-Font taken from KISS SDL project: https://github.com/actsl/kiss_sdl
+That's it! Math is amazing :)
+
+** Compiling: **
+
+Compiles under VS2017, GCC or Emscripten.  Just need SDL2 + SDL2TTF.
+
+** Emscripten example: **
+
+em++ -O3 -s USE_SDL=2 -s -s USE_SDL_TTF=2 --preload-file font.ttf source.cpp -o render_test.html --shell-file shell-minimal.html -s WASM=1
+
+** Credits: ** 
+
+- Font taken from KISS SDL project: https://github.com/actsl/kiss_sdl - Thanks a million.
+- Bisqwit: The crazy, smart, funny person that inspired this journey.
