@@ -21,6 +21,18 @@ typedef struct Vector2
 {
 	float x;
 	float y;
+
+
+	Vector2(float PassedX, float PassedY)
+	{
+		x = PassedX; y = PassedY;
+	}
+
+	Vector2()
+	{
+		x = 0.0; y = 0.0;
+	}
+
 } Vector2;
 
 typedef struct Vector3
@@ -28,6 +40,31 @@ typedef struct Vector3
 	float x;
 	float y;
 	float z;
+
+	Vector3(float PassedX, float PassedY, float PassedZ)
+	{
+		x = PassedX; y = PassedY; z = PassedZ;
+	}
+
+	Vector3(double PassedX, double PassedY)
+	{
+		x = PassedX; y = PassedY; z = 0;
+	}
+
+	Vector3()
+	{
+		x = 0.0; y = 0.0; z = 0.0;
+	}
+
+	void Normalise()
+	{
+		float VectorLength = sqrt(x * x + y * y + z * z);
+		x = x / VectorLength;
+		y = y / VectorLength;
+		z = z / VectorLength;
+	};
+
+
 } Vector3;
 
 typedef struct WallData // Data struct with vertices needed to draw 2.5D wall
@@ -48,20 +85,28 @@ typedef struct WallLine // Wall points (defined in absolute/top view) & wall col
 } WallLine;
 
 
-// **** FUNCTION DEFINITIONS ****
+// **** FUNCTION DECLARATIONS ****
 
 #define min(a,b)             (((a) < (b)) ? (a) : (b)) // min: Choose smaller of two scalars.
 #define max(a,b)             (((a) > (b)) ? (a) : (b)) // max: Choose greater of two scalars.
 
 Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 float Determinate(float x1, float y1, float x2, float y2);
-void RenderWall(WallLine);
+void RenderWall(WallLine wallLine);
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset); 
 void DrawPixelWithOffset(float x, float y, SDL_Point offset);
 // Offset functions make it easy to have multiple viewports
 
+float Dot(Vector2 first, Vector2 second); // Calculate vector2 dot product.
+Vector3 Cross(Vector3 first, Vector3 second); // Calculate Vector 3 cross product.
+
+
+
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
 bool IsPlayerCollidingWithWall();
+
+
+
 
 // **** GLOBAL DATA ****
 
@@ -123,12 +168,20 @@ int c = 0; // used to keep track of current verticle line to draw
 SDL_Color CeilingColor = { 224,224,224,255 };
 SDL_Color FloorColor = { 96,96,96,255 };
 
-WallLine wall1 = { 50.0, 0.0, 50.0, 50.0, { 255, 192, 203, 255 } };
-WallLine wall2 = { 0.0, 0.0, 50.0, 0.0, { 191, 255, 244, 255 } };
-WallLine wall3 = { 50.0, 50.0, 0.0, 50.0, { 160, 71, 235, 255 } };
-WallLine wall4 = { 0.0, 50.0, 0.0, 0.0, { 110, 127, 6, 255 } };
+
+// Walls must be defined in a clockwise 'winding order'
+WallLine wall1 = { 50.0, 0.0, 75.0, 25.0, { 255, 192, 203, 255 } };
+WallLine wall2 = { 75.0, 25.0, 50.0, 50.0, { 199, 199, 2, 255 } };
+WallLine wall3 = { 0.0, 0.0, 50.0, 0.0, { 191, 255, 244, 255 } };
+WallLine wall4 = { 50.0, 50.0, 0.0, 50.0, { 160, 71, 235, 255 } };
+WallLine wall5 = { 0.0, 50.0, 0.0, 0.0, { 110, 127, 6, 255 } };
 
 
+Vector2 LightPos = { 25.0, 25.0 };
+int LightIntensity = 20;
+int LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
+
+float TempLightDistance = 0;
 
 // SDL vars:
 TTF_Font *font;
@@ -336,6 +389,7 @@ void MainLoop()
 	RenderWall(wall2);
 	RenderWall(wall3);
 	RenderWall(wall4);
+	RenderWall(wall5);
 
 	// perform render
 	SDL_RenderPresent(m_renderer);
@@ -364,24 +418,26 @@ void DrawDebugText()
 		"Line Data: left  : X1 %.2f, Y1A %.2f / X1 %.2f, Y1B %.2f \n"
 		"Line Data: right : X2 %.2f, Y2A %.2f / X2 %.2f, Y2B %.2f \n\n"
 		"InterSPT1: X: %.2f Z: %.2f PT1 USED: %s PT2 USED: %s \n"
-		"InterSPT2: X: %.2f Z: %.2f PT1 USED: %s PT2 USED: %s \n\n"
+		"InterSPT2: X: %.2f Z: %.2f PT1 USED: %s PT2 USED: %s \n"
+		"LightDistance: %.2f \n\n"
 		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, left ctrl to crouch\nPress q to quit.",
 		player.x, player.y, //Player position
 		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle), // Angle data
 		TransformedLineP1.x, TransformedLineP1.y, TransformedLineP1.z, ((player.y - RotatedLineP1.x) * cos(Angle) + ((100 - player.x) - RotatedLineP1.y) * -sin(Angle)), ((player.y - RotatedLineP1.x) * sin(Angle) + ((100 - player.x) - RotatedLineP1.y) * cos(Angle)), // Transform line p1
 		TransformedLineP2.x, TransformedLineP2.y, TransformedLineP2.z, // Transform line p2
-		ViewWidth/2 - TransformedLineP1.x, ViewHeight/2 - TransformedLineP1.y, ViewHeight / 2 - TransformedLineP1.z, // Transform line p1
+		ViewWidth / 2 - TransformedLineP1.x, ViewHeight / 2 - TransformedLineP1.y, ViewHeight / 2 - TransformedLineP1.z, // Transform line p1
 		ViewWidth / 2 - TransformedLineP2.x, ViewHeight / 2 - TransformedLineP2.y, ViewHeight / 2 - TransformedLineP2.z, // Transform line p2
 		Wall.x1, Wall.y1a, Wall.y1b, // Wall data raw
 		Wall.x2, Wall.y2a, Wall.y2b, // Wall data raw
-		ViewWidth/2  + Wall.x1, ViewHeight/2 + Wall.y1a, ViewHeight/2 + Wall.y1b, // wall data relative to player/centre of screen
-		ViewWidth/2  + Wall.x2, ViewHeight/2 + Wall.y2a, ViewHeight/2 + Wall.y2b, // wall data relative to player/centre of screen
-		ViewWidth/2  + Wall.x1, ViewHeight/2 + Wall.y1a, ViewWidth/2  + Wall.x2, ViewHeight/2 + Wall.y2a, // top line
-		ViewWidth/2  + Wall.x1, ViewHeight/2 + Wall.y1b, ViewWidth/2  + Wall.x2, ViewHeight/2 + Wall.y2b, // bottom line
-		ViewWidth/2  + Wall.x1, ViewHeight/2 + Wall.y1a, ViewWidth/2  + Wall.x1, ViewHeight/2 + Wall.y1b, // left line
-		ViewWidth/2  + Wall.x2, ViewHeight/2 + Wall.y2a, ViewWidth/2  + Wall.x2, ViewHeight/2 + Wall.y2b,  // right line
+		ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1a, ViewHeight / 2 + Wall.y1b, // wall data relative to player/centre of screen
+		ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2a, ViewHeight / 2 + Wall.y2b, // wall data relative to player/centre of screen
+		ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1a, ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2a, // top line
+		ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1b, ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2b, // bottom line
+		ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1a, ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1b, // left line
+		ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2a, ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2b,  // right line
 		IntersectPoint1.x, IntersectPoint1.y, VertexInPlayerViewPT1 ? "Yes" : "No", VertexInPlayerViewPT2 ? "Yes" : "No",
-		IntersectPoint2.x, IntersectPoint2.y, VertexBehindPlayerPT1 ? "Yes" : "No", VertexBehindPlayerPT2 ? "Yes" : "No"
+		IntersectPoint2.x, IntersectPoint2.y, VertexBehindPlayerPT1 ? "Yes" : "No", VertexBehindPlayerPT2 ? "Yes" : "No",
+		TempLightDistance
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -433,6 +489,9 @@ void RenderWall(WallLine wallLine)
 	SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
 	DrawLineWithOffset(player.x, player.y, player.x + cos(Angle) * 5, player.y - sin(Angle) * 5, Offset);
 
+	// Change render colour to white for drawing light position
+	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+	DrawPixelWithOffset(LightPos.x, LightPos.y, Offset);
 
 
 
@@ -465,7 +524,7 @@ void RenderWall(WallLine wallLine)
 
 
 
-	// ROTATED VIEW
+	// TRANSFORMED VIEW
 
 	Offset.x = TransformedView.x;
 	Offset.y = TransformedView.y;
@@ -489,7 +548,7 @@ void RenderWall(WallLine wallLine)
 	TransformedLineP1.x = TransformedLineP1.y * cos(Angle) - TransformedLineP1.x * sin(Angle);
 	TransformedLineP2.x = TransformedLineP2.y * cos(Angle) - TransformedLineP2.x * sin(Angle);
 
-	if (TransformedLineP1.z > 0.0 || TransformedLineP2.z > 0.0) // If either point of the wall is in front of the player, draw the wall.
+	/*if (TransformedLineP1.z > 0.0 || TransformedLineP2.z > 0.0) // If either point of the wall is in front of the player, draw the wall.
 	{
 
 		IntersectPoint1 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -60, 2);
@@ -531,10 +590,75 @@ void RenderWall(WallLine wallLine)
 			}
 		}
 
-	}
+	}*/
 
 	// Draw wall / line.
 	DrawLineWithOffset((ViewWidth/2 - TransformedLineP1.x), (ViewHeight / 2 - TransformedLineP1.z), (ViewWidth / 2 - TransformedLineP2.x), (ViewHeight / 2 - TransformedLineP2.z), Offset);
+
+
+	
+	// LIGHTING CALCULATIONS (2d)
+
+	Vector2 TransformedLightPos;
+
+	TransformedLightPos.x = -((player.y - LightPos.x) * cos(Angle) + (player.x - LightPos.y) * sin(Angle));
+	TransformedLightPos.y = (player.y - LightPos.x) * -sin(Angle) + (player.x - LightPos.y) * cos(Angle);
+
+	DrawPixelWithOffset(
+		(float)ViewWidth / 2 + TransformedLightPos.x,
+		(float)ViewHeight / 2 + TransformedLightPos.y,
+		Offset);
+
+	Vector2 MiddleOfWall;
+	float WallXDistance = (max(TransformedLineP1.x, TransformedLineP2.x) - min(TransformedLineP1.x, TransformedLineP2.x));
+	float WallYDistance = (max(TransformedLineP1.z, TransformedLineP2.z) - min(TransformedLineP1.z, TransformedLineP2.z));
+
+	float HalfOfWallXDistance = WallXDistance / 2;
+	float HalfOfWallYDistance = WallYDistance / 2;
+	// if HalfOfWallXDistance != 0?
+	MiddleOfWall.x = min(TransformedLineP1.x, TransformedLineP2.x) + HalfOfWallXDistance;
+	MiddleOfWall.y = min(TransformedLineP1.z, TransformedLineP2.z) + HalfOfWallYDistance;
+
+	// Draw middle of wall pixel
+	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+	DrawPixelWithOffset((ViewWidth/2) - MiddleOfWall.x, (ViewHeight/2) - MiddleOfWall.y, Offset);
+	
+	Vector2 VectorToLight = { MiddleOfWall.x + TransformedLightPos.x, MiddleOfWall.y + TransformedLightPos.y };
+	float LightDistance = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
+
+	Vector2 VectorToLightNormalised = { VectorToLight.x / LightDistance, VectorToLight.y / LightDistance };
+
+	// Draw line from wall to light
+	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+	SDL_RenderDrawLine(m_renderer,
+		Offset.x + (ViewWidth / 2) - MiddleOfWall.x,
+		Offset.y + (ViewHeight / 2) - MiddleOfWall.y,
+		Offset.x + (ViewWidth / 2) - MiddleOfWall.x + (VectorToLightNormalised.x * 5),
+		Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (VectorToLightNormalised.y * 5)
+	);
+
+	// float WallLength
+
+	Vector3 WallNormal = Cross(
+		Vector3(HalfOfWallXDistance, HalfOfWallYDistance, 0),
+		Vector3(0, 0, -HalfOfWallYDistance)
+	);
+
+	WallNormal.Normalise();
+
+	float WallToLightPerpendicularity = abs(Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLightNormalised));
+
+	// Draw wall normal
+	SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
+	SDL_RenderDrawLine(m_renderer,
+		Offset.x + (ViewWidth / 2) - MiddleOfWall.x,
+		Offset.y + (ViewHeight / 2) - MiddleOfWall.y,
+		Offset.x + (ViewWidth / 2) - MiddleOfWall.x + (WallNormal.x * 5),
+		Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (WallNormal.y * 5)
+	);
+
+
+	TempLightDistance = WallToLightPerpendicularity;
 
 
 	// ** DRAW PIXEL VIEW ** 
@@ -615,9 +739,48 @@ void RenderWall(WallLine wallLine)
 	if (TransformedLineP1.z > 0.0 || TransformedLineP2.z > 0.0) // If either point of the wall is in front of the player, draw the wall.
 	{
 
+		IntersectPoint1 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -60, 2);
+		IntersectPoint2 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, 0.0001, 0.0001, 60, 2);
+
+		// If the line is partially behind the player (crosses the viewplane, clip it)
+
+		if (TransformedLineP1.z <= 0.0) // If PT1 is behind the player at all,
+		{
+
+			if (IntersectPoint1.y > 0.0)
+			{
+				VertexInPlayerViewPT1 = true;
+				TransformedLineP1.x = IntersectPoint1.x;
+				TransformedLineP1.z = IntersectPoint1.y;
+			}
+			else
+			{
+				VertexBehindPlayerPT1 = true;
+				TransformedLineP1.x = IntersectPoint2.x;
+				TransformedLineP1.z = IntersectPoint2.y;
+			}
+		}
+
+		if (TransformedLineP2.z <= 0.0) // If PT2 is behind the player at all,
+		{
+
+			if (IntersectPoint1.y > 0.0)
+			{
+				VertexInPlayerViewPT2 = true;
+				TransformedLineP2.x = IntersectPoint1.x;
+				TransformedLineP2.z = IntersectPoint1.y;
+			}
+			else
+			{
+				VertexBehindPlayerPT2 = true;
+				TransformedLineP2.x = IntersectPoint2.x;
+				TransformedLineP2.z = IntersectPoint2.y;
+			}
+		}
+
 		// *** PERSPECTIVE DIVIDE ***  - NO FOV DIVIDE - THEREFORE VFOV & HFOV ARE 90 DEGREES 
 
-		// x values and y values are scales depending on viewport height and width
+		// x values and y values are scaled depending on viewport height and width
 
 		int xscale = PerspectiveView.w;
 		int yscale = PerspectiveView.h * 4;
@@ -678,6 +841,11 @@ void RenderWall(WallLine wallLine)
 			Wall.y2b = PerspectiveViewClipPosBottom.y;
 		}
 
+
+
+
+		// Calculations for drawing the verticle lines of the wall, floor and ceiling.
+
 		float YDeltaTop, YDeltaBottom; // Used to calculate y position for current x position of wall.
 
 		float LeftMostWall = min(Wall.x1, Wall.x2);
@@ -730,7 +898,7 @@ void RenderWall(WallLine wallLine)
 
 				// Draw Wall
 				// Change render colour to the wall color
-				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r, wallLine.wallColor.g, wallLine.wallColor.b, wallLine.wallColor.a);
+				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r * WallToLightPerpendicularity, wallLine.wallColor.g * WallToLightPerpendicularity, wallLine.wallColor.b * WallToLightPerpendicularity, wallLine.wallColor.a);
 				DrawLineWithOffset(ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawTop, ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawBottom, Offset);
 			}
 
@@ -758,9 +926,6 @@ void RenderWall(WallLine wallLine)
 		DrawDebugText();
 }
 
-
-
-// My drawing functions to make porting bisqit's code & data easier.
 
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset)
 {
@@ -793,6 +958,7 @@ Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, fl
 
 	return RetPoint;
 }
+
 
 bool IsPlayerCollidingWithWall()
 {
@@ -832,6 +998,22 @@ bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2) // Figure out which side o
 		return true;
 	else
 		return false;
+}
+
+
+float Dot(Vector2 first, Vector2 second) // Calculate vector2 dot product.
+{
+	return first.x * second.x + first.y * second.y;
+};
+
+Vector3 Cross(Vector3 first, Vector3 second)
+{
+	Vector3 ReturnVector;
+	ReturnVector.x = first.y * second.z - first.z * second.y;
+	ReturnVector.y = first.z * second.x - first.x * second.z;
+	ReturnVector.z = first.x * second.y - first.y * second.x;
+
+	return ReturnVector;
 }
 
 
