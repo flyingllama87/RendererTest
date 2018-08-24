@@ -7,6 +7,9 @@
 #include <emscripten.h>
 #endif
 
+/*
+WARNING:  This code is messy & purely PoC.  You've been warned.
+*/
 
 
 // **** DATA STRUCTURES ****
@@ -99,7 +102,7 @@ void DrawPixelWithOffset(float x, float y, SDL_Point offset);
 
 float Dot(Vector2 first, Vector2 second); // Calculate vector2 dot product.
 Vector3 Cross(Vector3 first, Vector3 second); // Calculate Vector 3 cross product.
-
+float Clamp(float Clampee, float MinVal, float MaxVal);
 
 
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
@@ -168,21 +171,23 @@ int c = 0; // used to keep track of current verticle line to draw
 
 // self explanatory:
 
-SDL_Color CeilingColor = { 224,224,224,255 };
-SDL_Color FloorColor = { 96,96,96,255 };
+SDL_Color CeilingColor = { 64,64,64,255 };
+SDL_Color FloorColor = { 224,224,224,255 };
 
 
 // Walls must be defined in a clockwise 'winding order'
-WallLine wall1 = { 50.0, 0.0, 75.0, 25.0, { 255, 192, 203, 255 } };
-WallLine wall2 = { 75.0, 25.0, 50.0, 50.0, { 199, 199, 2, 255 } };
-WallLine wall3 = { 0.0, 0.0, 50.0, 0.0, { 191, 255, 244, 255 } };
-WallLine wall4 = { 50.0, 50.0, 0.0, 50.0, { 160, 71, 235, 255 } };
-WallLine wall5 = { 0.0, 50.0, 0.0, 0.0, { 110, 127, 6, 255 } };
+WallLine wall1 = { 50.0, 0.0, 100.0, 25.0, { 255, 0, 255, 255 } };
+WallLine wall2 = { 100.0, 25.0, 50.0, 50.0, { 255, 0, 255, 255 } };
+WallLine wall3 = { 0.0, 0.0, 50.0, 0.0, { 255, 0, 255, 255 } };
+WallLine wall4 = { 50.0, 50.0, 0.0, 50.0, { 255, 0, 255, 255 } };
+WallLine wall5 = { 0.0, 50.0, 0.0, 0.0, { 255, 0, 255, 255 } };
+// WallLine wall6 = {}
 
+float LightSize = 50.0;
 
-Vector2 LightPos = { (float)25, (float)37.5 };
-int LightIntensity = 20;
-int LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
+Vector2 LightPos = { (float)25, (float)25 };
+float MaxLightDistance = 100;
+float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 
 float TempLightDistance = 0;
 
@@ -338,6 +343,7 @@ void HandleInput()
 			player.x = 10;
 			player.y = 10;
 			Angle = 0.0000000;
+			LightPos.x = 25; LightPos.y = 25;
 			break;
 		case SDLK_t:
 			Angle += 45.0 / (180 / M_PI);
@@ -347,6 +353,12 @@ void HandleInput()
 			break;
 		case SDLK_y:
 			Angle += 0.000001 / (180 / M_PI);
+			break;
+		case SDLK_l:
+			if (LightPos.y > 0 && LightPos.y <= 100)
+				LightPos.y += 1;
+			else if (LightPos.y > 100)
+				LightPos.y = 1;
 			break;
 		case SDLK_LCTRL:
 			PlayerHeight = CrouchingHeight;
@@ -494,7 +506,7 @@ void RenderWall(WallLine wallLine)
 
 	// Change render colour to white for drawing light position
 	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-	DrawPixelWithOffset(LightPos.x, LightPos.y, Offset);
+	DrawPixelWithOffset(LightPos.y, LightPos.x, Offset);
 
 
 
@@ -551,57 +563,13 @@ void RenderWall(WallLine wallLine)
 	TransformedLineP1.x = TransformedLineP1.y * cos(Angle) - TransformedLineP1.x * sin(Angle);
 	TransformedLineP2.x = TransformedLineP2.y * cos(Angle) - TransformedLineP2.x * sin(Angle);
 
-	/*if (TransformedLineP1.z > 0.0 || TransformedLineP2.z > 0.0) // If either point of the wall is in front of the player, draw the wall.
-	{
-
-		IntersectPoint1 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -60, 2);
-		IntersectPoint2 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, 0.0001, 0.0001, 60, 2);
-
-		// If the line is partially behind the player (crosses the viewplane, clip it)
-
-		if (TransformedLineP1.z <= 0.0) // If PT1 is behind the player at all,
-		{
-
-			if (IntersectPoint1.y > 0.0)
-			{
-				VertexInPlayerViewPT1 = true;
-				TransformedLineP1.x = IntersectPoint1.x;
-				TransformedLineP1.z = IntersectPoint1.y;
-			}
-			else
-			{
-				VertexBehindPlayerPT1 = true;
-				TransformedLineP1.x = IntersectPoint2.x;
-				TransformedLineP1.z = IntersectPoint2.y;
-			}
-		}
-
-		if (TransformedLineP2.z <= 0.0) // If PT2 is behind the player at all,
-		{
-
-			if (IntersectPoint1.y > 0.0)
-			{
-				VertexInPlayerViewPT2 = true;
-				TransformedLineP2.x = IntersectPoint1.x;
-				TransformedLineP2.z = IntersectPoint1.y;
-			}
-			else
-			{
-				VertexBehindPlayerPT2 = true;
-				TransformedLineP2.x = IntersectPoint2.x;
-				TransformedLineP2.z = IntersectPoint2.y;
-			}
-		}
-
-	}*/
-
 	// Draw wall / line.
 	DrawLineWithOffset((ViewWidth/2 - TransformedLineP1.x), (ViewHeight / 2 - TransformedLineP1.z), (ViewWidth / 2 - TransformedLineP2.x), (ViewHeight / 2 - TransformedLineP2.z), Offset);
 
 	OldTransformedLineP1 = TransformedLineP1;
 	OldTransformedLineP2 = TransformedLineP2;
 	
-	// LIGHTING CALCULATIONS (2d)
+	// LIGHTING CALCULATIONS (2D / Height not taken into account)
 
 	Vector2 TransformedLightPos;
 
@@ -613,18 +581,14 @@ void RenderWall(WallLine wallLine)
 		(float)ViewHeight / 2 - TransformedLightPos.y,
 		Offset);
 
-
-
 	Vector2 MiddleOfWall;
-	//float WallXDistance = (max(TransformedLineP1.x, TransformedLineP2.x) - min(TransformedLineP1.x, TransformedLineP2.x));
-	//float WallYDistance = (max(TransformedLineP1.z, TransformedLineP2.z) - min(TransformedLineP1.z, TransformedLineP2.z));
 
 	float WallXDistance = TransformedLineP1.x - TransformedLineP2.x;
 	float WallYDistance = TransformedLineP1.z - TransformedLineP2.z;
 
 	float HalfOfWallXDistance = WallXDistance / 2;
 	float HalfOfWallYDistance = WallYDistance / 2;
-	// if HalfOfWallXDistance != 0?
+
 	MiddleOfWall.x = TransformedLineP1.x - HalfOfWallXDistance;
 	MiddleOfWall.y = TransformedLineP1.z - HalfOfWallYDistance;
 
@@ -646,8 +610,6 @@ void RenderWall(WallLine wallLine)
 		Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (VectorToLightNormalised.y * 5)
 	);
 
-	// float WallLength
-
 	Vector3 WallNormal = Cross(
 		Vector3(HalfOfWallXDistance, HalfOfWallYDistance, 0),
 		Vector3(0, 0, -1)
@@ -666,10 +628,14 @@ void RenderWall(WallLine wallLine)
 		Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (WallNormal.y * 5)
 	);
 
+	
 
 	TempLightDistance = WallToLightPerpendicularity;
 
-
+	float LightScaler = (1.00 / MaxLightDistance) * abs(LightDistance);
+	LightScaler = WallToLightPerpendicularity - LightScaler;
+	LightScaler = Clamp(LightScaler, 0.33, 1.0); // Min value of light scaler is 0.33 / equiv to ambient light.
+	
 
 	// ** DRAW PIXEL VIEW ** 
 
@@ -852,8 +818,6 @@ void RenderWall(WallLine wallLine)
 		}
 
 
-
-
 		// Calculations for drawing the verticle lines of the wall, floor and ceiling.
 
 		float YDeltaTop, YDeltaBottom; // Used to calculate y position for current x position of wall.
@@ -908,9 +872,21 @@ void RenderWall(WallLine wallLine)
 
 				// Draw Wall
 				// Change render colour to the wall color
-				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r * WallToLightPerpendicularity, wallLine.wallColor.g * WallToLightPerpendicularity, wallLine.wallColor.b * WallToLightPerpendicularity, wallLine.wallColor.a);
+				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
 				DrawLineWithOffset(ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawTop, ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawBottom, Offset);
 			}
+
+
+			// DRAW LIGHT SOURCE
+
+			Vector2 LightPixel =
+			{
+				-(TransformedLightPos.x * xscale) / (TransformedLightPos.y),  // Perspective divides
+				-(yscale) / (TransformedLightPos.y / 2)
+			};
+
+			SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+			DrawPixelWithOffset(ViewWidth / 2 + LightPixel.x, ViewWidth / 2 + LightPixel.y, Offset);
 
 
 			// Change render colour to green
@@ -1024,6 +1000,15 @@ Vector3 Cross(Vector3 first, Vector3 second)
 	ReturnVector.z = first.x * second.y - first.y * second.x;
 
 	return ReturnVector;
+}
+
+float Clamp(float Clampee, float MinVal, float MaxVal)
+{
+	if (Clampee < MinVal)
+		Clampee = MinVal;
+	if (Clampee > MaxVal)
+		Clampee = MaxVal;
+	return Clampee;
 }
 
 
