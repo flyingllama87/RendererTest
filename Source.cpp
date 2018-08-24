@@ -151,6 +151,9 @@ SDL_Point RotatedLineP2 = { 0, 0 };  // used for drawing the current line.
 Vector3 TransformedLineP1 = { 0.0, 0.0 };  // used for drawing the current line.
 Vector3 TransformedLineP2 = { 0.0, 0.0 };  // used for drawing the current line.
 
+Vector3 OldTransformedLineP1 = { 0.0, 0.0 };  // used for drawing the current line.
+Vector3 OldTransformedLineP2 = { 0.0, 0.0 };  // used for drawing the current line.
+
 Vector2 IntersectPoint1 = { 0.0, 0.0 };
 Vector2 IntersectPoint2 = { 0.0, 0.0 };
 
@@ -177,7 +180,7 @@ WallLine wall4 = { 50.0, 50.0, 0.0, 50.0, { 160, 71, 235, 255 } };
 WallLine wall5 = { 0.0, 50.0, 0.0, 0.0, { 110, 127, 6, 255 } };
 
 
-Vector2 LightPos = { 25.0, 25.0 };
+Vector2 LightPos = { (float)25, (float)37.5 };
 int LightIntensity = 20;
 int LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 
@@ -405,7 +408,7 @@ void DrawDebugText()
 		"  Absolute View                    Rotated View                     Transform View                   Pixel View                       Perspective View\n\n" // Hacky
 		"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n"
-		"TrnsfmPT1: X %.2f, Y %.2f, Z %.2f. ALTX %.2f. ALTZ %.2f. Note: Z val is used for Y pos in transform view. \n"
+		"TrnsfmPT1: X %.2f, Y %.2f, Z %.2f. \n"
 		"TrnsfmPT2: X %.2f, Y %.2f, Z %.2f. \n"
 		"Relative : X %.2f, Y %.2f, Z %.2f. Note: Z val is used for Y pos in transform view. \n"
 		"to view  : X %.2f, Y %.2f, Z %.2f. \n\n"
@@ -423,8 +426,8 @@ void DrawDebugText()
 		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, left ctrl to crouch\nPress q to quit.",
 		player.x, player.y, //Player position
 		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle), // Angle data
-		TransformedLineP1.x, TransformedLineP1.y, TransformedLineP1.z, ((player.y - RotatedLineP1.x) * cos(Angle) + ((100 - player.x) - RotatedLineP1.y) * -sin(Angle)), ((player.y - RotatedLineP1.x) * sin(Angle) + ((100 - player.x) - RotatedLineP1.y) * cos(Angle)), // Transform line p1
-		TransformedLineP2.x, TransformedLineP2.y, TransformedLineP2.z, // Transform line p2
+		OldTransformedLineP1.x, OldTransformedLineP1.y, OldTransformedLineP1.z, // Transform line p1
+		OldTransformedLineP2.x, OldTransformedLineP2.y, OldTransformedLineP2.z, // Transform line p2
 		ViewWidth / 2 - TransformedLineP1.x, ViewHeight / 2 - TransformedLineP1.y, ViewHeight / 2 - TransformedLineP1.z, // Transform line p1
 		ViewWidth / 2 - TransformedLineP2.x, ViewHeight / 2 - TransformedLineP2.y, ViewHeight / 2 - TransformedLineP2.z, // Transform line p2
 		Wall.x1, Wall.y1a, Wall.y1b, // Wall data raw
@@ -595,35 +598,41 @@ void RenderWall(WallLine wallLine)
 	// Draw wall / line.
 	DrawLineWithOffset((ViewWidth/2 - TransformedLineP1.x), (ViewHeight / 2 - TransformedLineP1.z), (ViewWidth / 2 - TransformedLineP2.x), (ViewHeight / 2 - TransformedLineP2.z), Offset);
 
-
+	OldTransformedLineP1 = TransformedLineP1;
+	OldTransformedLineP2 = TransformedLineP2;
 	
 	// LIGHTING CALCULATIONS (2d)
 
 	Vector2 TransformedLightPos;
 
-	TransformedLightPos.x = -((player.y - LightPos.x) * cos(Angle) + (player.x - LightPos.y) * sin(Angle));
-	TransformedLightPos.y = (player.y - LightPos.x) * -sin(Angle) + (player.x - LightPos.y) * cos(Angle);
+	TransformedLightPos.x = (player.y - LightPos.x) * cos(Angle) + ( LightPos.y - player.x) * -sin(Angle);
+	TransformedLightPos.y = (player.y - LightPos.x) * sin(Angle) + (LightPos.y - player.x) * cos(Angle);
 
 	DrawPixelWithOffset(
-		(float)ViewWidth / 2 + TransformedLightPos.x,
-		(float)ViewHeight / 2 + TransformedLightPos.y,
+		(float)ViewWidth / 2 - TransformedLightPos.x,
+		(float)ViewHeight / 2 - TransformedLightPos.y,
 		Offset);
 
+
+
 	Vector2 MiddleOfWall;
-	float WallXDistance = (max(TransformedLineP1.x, TransformedLineP2.x) - min(TransformedLineP1.x, TransformedLineP2.x));
-	float WallYDistance = (max(TransformedLineP1.z, TransformedLineP2.z) - min(TransformedLineP1.z, TransformedLineP2.z));
+	//float WallXDistance = (max(TransformedLineP1.x, TransformedLineP2.x) - min(TransformedLineP1.x, TransformedLineP2.x));
+	//float WallYDistance = (max(TransformedLineP1.z, TransformedLineP2.z) - min(TransformedLineP1.z, TransformedLineP2.z));
+
+	float WallXDistance = TransformedLineP1.x - TransformedLineP2.x;
+	float WallYDistance = TransformedLineP1.z - TransformedLineP2.z;
 
 	float HalfOfWallXDistance = WallXDistance / 2;
 	float HalfOfWallYDistance = WallYDistance / 2;
 	// if HalfOfWallXDistance != 0?
-	MiddleOfWall.x = min(TransformedLineP1.x, TransformedLineP2.x) + HalfOfWallXDistance;
-	MiddleOfWall.y = min(TransformedLineP1.z, TransformedLineP2.z) + HalfOfWallYDistance;
+	MiddleOfWall.x = TransformedLineP1.x - HalfOfWallXDistance;
+	MiddleOfWall.y = TransformedLineP1.z - HalfOfWallYDistance;
 
 	// Draw middle of wall pixel
 	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
 	DrawPixelWithOffset((ViewWidth/2) - MiddleOfWall.x, (ViewHeight/2) - MiddleOfWall.y, Offset);
 	
-	Vector2 VectorToLight = { MiddleOfWall.x + TransformedLightPos.x, MiddleOfWall.y + TransformedLightPos.y };
+	Vector2 VectorToLight = { MiddleOfWall.x - TransformedLightPos.x, MiddleOfWall.y - TransformedLightPos.y };
 	float LightDistance = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
 
 	Vector2 VectorToLightNormalised = { VectorToLight.x / LightDistance, VectorToLight.y / LightDistance };
@@ -641,12 +650,12 @@ void RenderWall(WallLine wallLine)
 
 	Vector3 WallNormal = Cross(
 		Vector3(HalfOfWallXDistance, HalfOfWallYDistance, 0),
-		Vector3(0, 0, -HalfOfWallYDistance)
+		Vector3(0, 0, -1)
 	);
 
 	WallNormal.Normalise();
 
-	float WallToLightPerpendicularity = abs(Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLightNormalised));
+	float WallToLightPerpendicularity = Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLightNormalised);
 
 	// Draw wall normal
 	SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
@@ -659,6 +668,7 @@ void RenderWall(WallLine wallLine)
 
 
 	TempLightDistance = WallToLightPerpendicularity;
+
 
 
 	// ** DRAW PIXEL VIEW ** 
