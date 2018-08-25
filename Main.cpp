@@ -18,12 +18,10 @@ WARNING:  This code is messy & purely PoC.  You've been warned.
 
 TO DO:
 - Code clean up & break program into separate files.
-- Fix LightPos Co-ords/rotation matrix
 - Better clipping.
 
 
 FEATURES TO IMPLEMENT:
-- Collision detection under all directions and walls
 - Optomisation
 - Draw Light box instead of a single pixel.
 - Larger perspective view?
@@ -64,7 +62,7 @@ double Angle = 0.0000001f; // starting angle for player.
 // WALL DEFS
 
 SDL_Color CeilingColor = { 64,64,64,255 };
-SDL_Color FloorColor = { 224,224,224,255 };
+SDL_Color FloorColor = { 192,192,192,255 };
 
 
 
@@ -72,8 +70,8 @@ SDL_Color FloorColor = { 224,224,224,255 };
 
 float LightSize = 50.0;
 
-Vector2 LightPos = { (float)25, (float)25 };
-float MaxLightDistance = 100;
+Vector2 LightPos = { (float)30, (float)10 };
+float MaxLightDistance = 150;
 float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 
 // Walls must be defined in a clockwise 'winding order'
@@ -246,10 +244,10 @@ void HandleInput()
 			Angle += 0.000001 / (180 / M_PI);
 			break;
 		case SDLK_l:
-			if (LightPos.y > 0 && LightPos.y <= 100)
-				LightPos.y += 1;
-			else if (LightPos.y > 100)
-				LightPos.y = 1;
+			if (LightPos.x > 0 && LightPos.x <= 100)
+				LightPos.x += 1;
+			else if (LightPos.x > 100)
+				LightPos.x = 1;
 			break;
 		case SDLK_LCTRL:
 			PlayerHeight = CrouchingHeight;
@@ -387,8 +385,8 @@ void RenderDebug(WallLine wallLine)
 
 	Vector2 TransformedLightPos;
 
-	TransformedLightPos.x = (player.y - LightPos.x) * cos(Angle) + (LightPos.y - player.x) * -sin(Angle);
-	TransformedLightPos.y = (player.y - LightPos.x) * sin(Angle) + (LightPos.y - player.x) * cos(Angle);
+	TransformedLightPos.x = (player.y - LightPos.y) * cos(Angle) - (LightPos.x - player.x) * sin(Angle);
+	TransformedLightPos.y = (player.y - LightPos.y) * sin(Angle) + (LightPos.x - player.x) * cos(Angle);
 
 	Vector2 MiddleOfWall;
 
@@ -446,7 +444,7 @@ void RenderDebug(WallLine wallLine)
 
 		// Change render colour to white for drawing light position
 		SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-		DrawPixelWithOffset(LightPos.y, LightPos.x, Offset);
+		DrawPixelWithOffset(LightPos.x, LightPos.y, Offset);
 
 
 
@@ -541,8 +539,8 @@ void RenderWall(WallLine wallLine)
 
 	Vector2 TransformedLightPos;
 
-	TransformedLightPos.x = (player.y - LightPos.x) * cos(Angle) + ( LightPos.y - player.x) * -sin(Angle);
-	TransformedLightPos.y = (player.y - LightPos.x) * sin(Angle) + (LightPos.y - player.x) * cos(Angle);
+	TransformedLightPos.x = (player.y - LightPos.y) * cos(Angle) - (LightPos.x - player.x) * sin(Angle);
+	TransformedLightPos.y = (player.y - LightPos.y) * sin(Angle) + (LightPos.x - player.x) * cos(Angle);
 
 	Vector2 MiddleOfWall;
 
