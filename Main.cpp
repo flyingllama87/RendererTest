@@ -4,6 +4,7 @@
 #include <SDL_ttf.h>
 #include "Utils.h"
 
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -65,12 +66,6 @@ double Angle = 0.0000001f; // starting angle for player.
 SDL_Color CeilingColor = { 64,64,64,255 };
 SDL_Color FloorColor = { 224,224,224,255 };
 
-// Walls must be defined in a clockwise 'winding order'
-WallLine wall1 = { 50.0, 0.0, 100.0, 25.0, { 255, 0, 255, 255 } };
-WallLine wall2 = { 100.0, 25.0, 50.0, 50.0, { 255, 0, 255, 255 } };
-WallLine wall3 = { 0.0, 0.0, 50.0, 0.0, { 255, 0, 255, 255 } };
-WallLine wall4 = { 50.0, 50.0, 0.0, 50.0, { 255, 0, 255, 255 } };
-WallLine wall5 = { 0.0, 50.0, 0.0, 0.0, { 255, 0, 255, 255 } };
 
 
 // LIGHTING DEFS
@@ -81,7 +76,8 @@ Vector2 LightPos = { (float)25, (float)25 };
 float MaxLightDistance = 100;
 float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 
-
+// Walls must be defined in a clockwise 'winding order'
+std::vector<WallLine> AllWalls;
 
 // VIEW DEFS x, y, w, h
 
@@ -97,6 +93,20 @@ int InfoTextureWidth;
 int InfoTextureHeight;
 bool DrawingLastWall = false;
 
+
+bool LoadMap()
+{
+
+	AllWalls = {
+		{ 50.0, 0.0, 100.0, 25.0,{ 255, 0, 255, 255 } },	// Wall 1
+		{ 100.0, 25.0, 50.0, 50.0,{ 255, 0, 255, 255 } },	// Wall 2
+		{ 0.0, 0.0, 50.0, 0.0,{ 255, 0, 255, 255 } },		// Wall 3
+		{ 50.0, 50.0, 0.0, 50.0,{ 255, 0, 255, 255 } },		// Wall 4
+		{ 0.0, 50.0, 0.0, 0.0,{ 255, 0, 255, 255 } }		// Wall 5
+	};
+
+	return true;
+}
 
 
 void DrawViews()
@@ -183,22 +193,42 @@ void HandleInput()
 		case SDLK_DOWN:
 			player.x -= cos(Angle);
 			player.y += sin(Angle);
+			if (IsPlayerCollidingWithWall())
+			{
+				player = CurrentPos;
+			}
 			break;
 		case SDLK_w:
 			player.x += cos(Angle);
 			player.y -= sin(Angle);
+			if (IsPlayerCollidingWithWall())
+			{
+				player = CurrentPos;
+			}
 			break;
 		case SDLK_s:
 			player.x -= cos(Angle);
 			player.y += sin(Angle);
+			if (IsPlayerCollidingWithWall())
+			{
+				player = CurrentPos;
+			}
 			break;
 		case SDLK_a:
 			player.x -= sin(Angle);
 			player.y -= cos(Angle);
+			if (IsPlayerCollidingWithWall())
+			{
+				player = CurrentPos;
+			}
 			break;
 		case SDLK_d:
 			player.x += sin(Angle);
 			player.y += cos(Angle);
+			if (IsPlayerCollidingWithWall())
+			{
+				player = CurrentPos;
+			}
 			break;
 		case SDLK_r:
 			player.x = 10;
@@ -258,22 +288,22 @@ void MainLoop()
 
 	// RenderWalls
 
-	RenderWall(wall1);
-	RenderWall(wall2);
-	RenderWall(wall3);
-	RenderWall(wall4);
-	RenderWall(wall5);
-
+	for (WallLine wall : AllWalls)
+	{
+		RenderWall(wall);
+	}
+	
 	DrawViews();
 
-	RenderDebug(wall1);
-	RenderDebug(wall2);
-	RenderDebug(wall3);
-	RenderDebug(wall4);
-	DrawingLastWall = true; // Used to determine when the last wall is being drawn so debug info can be drawn.  Switch to false after draw.
-	RenderDebug(wall5);
+	for (auto& wall : AllWalls)
+	{
+		if (&AllWalls.back() == &wall)
+		{
+			DrawingLastWall = true; // Used to determine when the last wall is being drawn so debug info can be drawn.  Switch to false after draw.
+		}
+		RenderDebug(wall);
+	}
 	
-
 
 	// perform render
 	SDL_RenderPresent(m_renderer);
@@ -754,8 +784,17 @@ int main(int argc, char * argv[])
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
 	TTF_Init();
 
-	SDL_CreateWindowAndRenderer(WindowWidth, WindowHeight, 0, &m_window, &m_renderer);
+	if (SDL_CreateWindowAndRenderer(WindowWidth, WindowHeight, 0, &m_window, &m_renderer) < 0)
+	{
+		ContinueGame = false;
+	}
 	font = TTF_OpenFont("font.ttf", 16);
+
+	if (font == NULL || LoadMap() == false)
+	{
+		ContinueGame = false;
+	}
+
 
 #ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop(MainLoop, -1, 1);
