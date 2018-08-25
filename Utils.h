@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 
 struct Player;
 struct Vector2;
@@ -21,12 +22,8 @@ extern SDL_Event event; // Used for tracking SDL events.
 
 extern Player player;
 
-// Walls must be defined in a clockwise 'winding order'
-extern WallLine wall1;
-extern WallLine wall2;
-extern WallLine wall3;
-extern WallLine wall4;
-extern WallLine wall5;
+extern std::vector<WallLine> AllWalls;
+
 
 // *** STRUCT DEFS ***
 
@@ -93,7 +90,6 @@ typedef struct WallData // Data struct with vertices needed to draw 2.5D wall
 	float y1b, y2b;
 } WallData;
 
-
 typedef struct WallLine // Wall points (defined in absolute/top view) & wall colour 
 {
 	float PT1x;
@@ -106,13 +102,11 @@ typedef struct WallLine // Wall points (defined in absolute/top view) & wall col
 
 // **** FUNCTION DECLARATIONS ****
 
-#define min(a,b)             (((a) < (b)) ? (a) : (b)) // min: Choose smaller of two scalars.
-#define max(a,b)             (((a) > (b)) ? (a) : (b)) // max: Choose greater of two scalars.
+bool LoadMap();
 
-Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
-float Determinate(float x1, float y1, float x2, float y2);
 void RenderWall(WallLine wallLine);
 void RenderDebug(WallLine wallLine);
+
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset);
 void DrawPixelWithOffset(float x, float y, SDL_Point offset);
 // Offset functions make it easy to have multiple viewports
@@ -120,7 +114,11 @@ void DrawPixelWithOffset(float x, float y, SDL_Point offset);
 float Dot(Vector2 first, Vector2 second); // Calculate vector2 dot product.
 Vector3 Cross(Vector3 first, Vector3 second); // Calculate Vector 3 cross product.
 float Clamp(float Clampee, float MinVal, float MaxVal);
+Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
+float Determinate(float x1, float y1, float x2, float y2);
 
+#define min(a,b) (((a) < (b)) ? (a) : (b)) // min: Choose smaller of two scalars.
+#define max(a,b) (((a) > (b)) ? (a) : (b)) // max: Choose greater of two scalars.
 
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
 bool IsPlayerCollidingWithWall();

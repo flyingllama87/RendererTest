@@ -55,29 +55,12 @@ Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, fl
 
 bool IsPlayerCollidingWithWall()
 {
-	Vector2 WallPt1 = { wall1.PT1x, wall1.PT1y };
-	Vector2 WallPt2 = { wall1.PT2x, wall1.PT2y };
 
-	if (!PlayerInBounds(WallPt1, WallPt2))
-		return true;
-
-	WallPt1 = { wall2.PT1x, wall2.PT1y };
-	WallPt2 = { wall2.PT2x, wall2.PT2y };
-
-	if (!PlayerInBounds(WallPt1, WallPt2))
-		return true;
-
-	WallPt1 = { wall3.PT1x, wall3.PT1y };
-	WallPt2 = { wall3.PT2x, wall3.PT2y };
-
-	if (!PlayerInBounds(WallPt1, WallPt2))
-		return true;
-
-	WallPt1 = { wall4.PT1x, wall4.PT1y };
-	WallPt2 = { wall4.PT2x, wall4.PT2y };
-
-	if (!PlayerInBounds(WallPt1, WallPt2))
-		return true;
+	for (WallLine wall : AllWalls)
+	{
+		if (!PlayerInBounds(Vector2(wall.PT1x, wall.PT1y), Vector2(wall.PT2x, wall.PT2y) ))
+			return true;
+	}
 
 	return false;
 
