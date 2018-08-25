@@ -67,7 +67,7 @@ typedef struct Vector3
 
 	Vector3(double PassedX, double PassedY)
 	{
-		x = PassedX; y = PassedY; z = 0;
+		x = (float)PassedX; y = (float)PassedY; z = 0;
 	}
 
 	Vector3()
@@ -112,6 +112,7 @@ typedef struct WallLine // Wall points (defined in absolute/top view) & wall col
 Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 float Determinate(float x1, float y1, float x2, float y2);
 void RenderWall(WallLine wallLine);
+void RenderDebug(WallLine wallLine);
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset);
 void DrawPixelWithOffset(float x, float y, SDL_Point offset);
 // Offset functions make it easy to have multiple viewports

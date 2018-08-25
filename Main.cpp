@@ -49,18 +49,18 @@ const int ViewWidth = 300;
 const int ViewHeight = 300;
 
 
+// PLAYER DEFS
 
-// Player defs.
-
-
-int CrouchingHeight = 4 * (ViewHeight / 4); // Crouching Height
-int StandingHeight = 10 * (ViewHeight / 4); // standing height.
+int CrouchingHeight = 4 * (WindowHeight / 4); // Crouching Height
+int StandingHeight = 10 * (WindowHeight / 4); // standing height.
 
 int PlayerHeight = StandingHeight; // Start standing.
 Player player = { 10, 10 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
 double Angle = 0.0000001f; // starting angle for player.
 
 
+
+// WALL DEFS
 
 SDL_Color CeilingColor = { 64,64,64,255 };
 SDL_Color FloorColor = { 224,224,224,255 };
@@ -73,7 +73,8 @@ WallLine wall4 = { 50.0, 50.0, 0.0, 50.0, { 255, 0, 255, 255 } };
 WallLine wall5 = { 0.0, 50.0, 0.0, 0.0, { 255, 0, 255, 255 } };
 
 
-// LIGHTING DEFINITIONS
+// LIGHTING DEFS
+
 float LightSize = 50.0;
 
 Vector2 LightPos = { (float)25, (float)25 };
@@ -82,19 +83,19 @@ float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 
 
 
-// VIEW DEFINITIONS x, y, w, h
+// VIEW DEFS x, y, w, h
 
 SDL_Point Offset; // used for setting an 'offset' for each view.
 
-SDL_Rect AbsoluteView = { 30, 15, ViewWidth, ViewHeight };
-SDL_Rect TransformedView = { 690, 15, ViewWidth, ViewHeight };
-SDL_Rect PerspectiveView = { 1350, 15, ViewWidth, ViewHeight };
+SDL_Rect AbsoluteView = { 15, 15, ViewWidth, ViewHeight };
+SDL_Rect TransformedView = { WindowWidth - ViewWidth - 15, 15, ViewWidth, ViewHeight };
+SDL_Rect PerspectiveView = { 0, 0, WindowWidth, WindowHeight};
 
 // DEBUG: Following is used for debug only:
 char message[3000] = "";
 int InfoTextureWidth;
 int InfoTextureHeight;
-bool DrawingFirstWall = true;
+bool DrawingLastWall = false;
 
 
 
@@ -144,12 +145,12 @@ void DrawViews()
 	// *** DRAW PERSPECTIVE VIEWPORT ***
 
 	// Set color to black & draw viewport background
-	SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 255);
-	SDL_RenderFillRect(m_renderer, &PerspectiveView);
+	//SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 255);
+	//SDL_RenderFillRect(m_renderer, &PerspectiveView);
 
 	// Set color to red and draw border.
-	SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
-	SDL_RenderDrawRect(m_renderer, &PerspectiveView);
+	//SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
+	//SDL_RenderDrawRect(m_renderer, &PerspectiveView);
 
 }
 
@@ -253,18 +254,26 @@ void MainLoop()
 	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
 	SDL_RenderClear(m_renderer);
 
-	// Set up viewports
 
-	DrawViews();
 
 	// RenderWalls
 
-	DrawingFirstWall = true; // Used to determine when the first wall is being drawn so debug info can be drawn.  Switch to false after first draw.
 	RenderWall(wall1);
 	RenderWall(wall2);
 	RenderWall(wall3);
 	RenderWall(wall4);
 	RenderWall(wall5);
+
+	DrawViews();
+
+	RenderDebug(wall1);
+	RenderDebug(wall2);
+	RenderDebug(wall3);
+	RenderDebug(wall4);
+	DrawingLastWall = true; // Used to determine when the last wall is being drawn so debug info can be drawn.  Switch to false after draw.
+	RenderDebug(wall5);
+	
+
 
 	// perform render
 	SDL_RenderPresent(m_renderer);
@@ -297,11 +306,161 @@ void DrawDebugText()
 	SDL_FreeSurface(InfoTextSurface);
 	SDL_DestroyTexture(InfoTexture);
 
-	DrawingFirstWall = false;
+	DrawingLastWall = false;
 }
 
 
+void RenderDebug(WallLine wallLine)
+{
 
+	SDL_Point AbsoluteLineP1 = { 0, 0 }; // used for drawing the current line.
+	SDL_Point AbsoluteLineP2 = { 0, 0 }; // used for drawing the current line.
+
+	SDL_Point RotatedLineP1 = { 0, 0 };  // used for drawing the current line.
+	SDL_Point RotatedLineP2 = { 0, 0 };  // used for drawing the current line.
+
+	Vector3 TransformedLineP1 = { 0.0, 0.0 };  // used for drawing the current line.
+	Vector3 TransformedLineP2 = { 0.0, 0.0 };  // used for drawing the current line.
+
+	Vector2 IntersectPoint1 = { 0.0, 0.0 };
+	Vector2 IntersectPoint2 = { 0.0, 0.0 };
+
+	WallData Wall = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }; // Data used to draw the wall.  This structure holds the values of the '3d wall' projected on to the 2d 'camera'.
+
+
+	AbsoluteLineP1.x = wallLine.PT1x;
+	AbsoluteLineP1.y = wallLine.PT1y;
+	AbsoluteLineP2.x = wallLine.PT2x;
+	AbsoluteLineP2.y = wallLine.PT2y;
+
+
+
+	// set line to be relative to player.
+	TransformedLineP1.x = AbsoluteLineP1.x - player.x;
+	TransformedLineP1.y = player.y - AbsoluteLineP1.y;
+
+	TransformedLineP2.x = AbsoluteLineP2.x - player.x;
+	TransformedLineP2.y = player.y - AbsoluteLineP2.y;
+
+	// calculate depth of verticies based on where the player is looking
+	TransformedLineP1.z = TransformedLineP1.y * sin(Angle) + TransformedLineP1.x * cos(Angle);
+	TransformedLineP2.z = TransformedLineP2.y * sin(Angle) + TransformedLineP2.x * cos(Angle);
+
+	// calculate x position of verticies based on where the player is looking
+	TransformedLineP1.x = TransformedLineP1.y * cos(Angle) - TransformedLineP1.x * sin(Angle);
+	TransformedLineP2.x = TransformedLineP2.y * cos(Angle) - TransformedLineP2.x * sin(Angle);
+
+
+
+
+	// LIGHTING CALCULATIONS (2D / Height not taken into account)
+
+	Vector2 TransformedLightPos;
+
+	TransformedLightPos.x = (player.y - LightPos.x) * cos(Angle) + (LightPos.y - player.x) * -sin(Angle);
+	TransformedLightPos.y = (player.y - LightPos.x) * sin(Angle) + (LightPos.y - player.x) * cos(Angle);
+
+	Vector2 MiddleOfWall;
+
+	float WallXDistance = TransformedLineP1.x - TransformedLineP2.x;
+	float WallYDistance = TransformedLineP1.z - TransformedLineP2.z;
+
+	float HalfOfWallXDistance = WallXDistance / 2;
+	float HalfOfWallYDistance = WallYDistance / 2;
+
+	MiddleOfWall.x = TransformedLineP1.x - HalfOfWallXDistance;
+	MiddleOfWall.y = TransformedLineP1.z - HalfOfWallYDistance;
+
+	Vector2 VectorToLight = { MiddleOfWall.x - TransformedLightPos.x, MiddleOfWall.y - TransformedLightPos.y };
+	float LightDistance = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
+
+	Vector2 VectorToLightNormalised = { VectorToLight.x / LightDistance, VectorToLight.y / LightDistance };
+
+
+	Vector3 WallNormal = Cross(
+		Vector3(HalfOfWallXDistance, HalfOfWallYDistance, 0),
+		Vector3(0, 0, -1)
+	);
+
+	WallNormal.Normalise();
+
+	float WallToLightPerpendicularity = Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLightNormalised);
+
+	float LightScaler = (1.00 / MaxLightDistance) * abs(LightDistance);
+	LightScaler = WallToLightPerpendicularity - LightScaler;
+	LightScaler = Clamp(LightScaler, 0.33, 1.0); // Min value of light scaler is 0.33 / equiv to ambient light.
+
+
+	if (DrawingLastWall == true)
+	{
+		// Set up viewports
+		DrawDebugText();
+	}
+
+		// ************* DRAW VIEWPORTS ***********************
+
+		//ABSOLUTE VIEW
+
+		Offset.x = AbsoluteView.x;
+		Offset.y = AbsoluteView.y;
+
+		// Change render colour to Green.
+		SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
+
+		// Draw Wall / Line in 'Absolute View'
+		DrawLineWithOffset(AbsoluteLineP1.x, AbsoluteLineP1.y, AbsoluteLineP2.x, AbsoluteLineP2.y, Offset);
+
+		// Draw player line with red
+		SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
+		DrawLineWithOffset(player.x, player.y, player.x + cos(Angle) * 5, player.y - sin(Angle) * 5, Offset);
+
+		// Change render colour to white for drawing light position
+		SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+		DrawPixelWithOffset(LightPos.y, LightPos.x, Offset);
+
+
+
+
+
+		// TRANSFORMED VIEW
+
+		Offset.x = TransformedView.x;
+		Offset.y = TransformedView.y;
+
+		// Change render colour
+		SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
+
+
+
+		// Draw wall / line.
+		DrawLineWithOffset((ViewWidth / 2 - TransformedLineP1.x), (ViewHeight / 2 - TransformedLineP1.z), (ViewWidth / 2 - TransformedLineP2.x), (ViewHeight / 2 - TransformedLineP2.z), Offset);
+
+
+		DrawPixelWithOffset(
+			(float)ViewWidth / 2 - TransformedLightPos.x,
+			(float)ViewHeight / 2 - TransformedLightPos.y,
+			Offset);
+
+		// Draw line from wall to light
+		SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+		SDL_RenderDrawLine(m_renderer,
+			Offset.x + (ViewWidth / 2) - MiddleOfWall.x,
+			Offset.y + (ViewHeight / 2) - MiddleOfWall.y,
+			Offset.x + (ViewWidth / 2) - MiddleOfWall.x + (VectorToLightNormalised.x * 5),
+			Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (VectorToLightNormalised.y * 5)
+		);
+
+
+		// Draw wall normal
+		SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
+		SDL_RenderDrawLine(m_renderer,
+			Offset.x + (ViewWidth / 2) - MiddleOfWall.x,
+			Offset.y + (ViewHeight / 2) - MiddleOfWall.y,
+			Offset.x + (ViewWidth / 2) - MiddleOfWall.x + (WallNormal.x * 5),
+			Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (WallNormal.y * 5)
+		);
+
+}
 
 
 
@@ -328,32 +487,6 @@ void RenderWall(WallLine wallLine)
 	AbsoluteLineP2.x = wallLine.PT2x;
 	AbsoluteLineP2.y = wallLine.PT2y;
 
-	//ABSOLUTE VIEW
-
-	Offset.x = AbsoluteView.x;
-	Offset.y = AbsoluteView.y;
-
-	// Change render colour to Green.
-	SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
-
-	// Draw Wall / Line in 'Absolute View'
-	DrawLineWithOffset(AbsoluteLineP1.x, AbsoluteLineP1.y, AbsoluteLineP2.x, AbsoluteLineP2.y, Offset);
-
-	// Draw player line with red
-	SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
-	DrawLineWithOffset(player.x, player.y, player.x + cos(Angle) * 5, player.y - sin(Angle) * 5, Offset);
-
-	// Change render colour to white for drawing light position
-	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-	DrawPixelWithOffset(LightPos.y, LightPos.x, Offset);
-
-	// TRANSFORMED VIEW
-
-	Offset.x = TransformedView.x;
-	Offset.y = TransformedView.y;
-
-	// Change render colour
-	SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
 
 
 	// set line to be relative to player.
@@ -371,9 +504,6 @@ void RenderWall(WallLine wallLine)
 	TransformedLineP1.x = TransformedLineP1.y * cos(Angle) - TransformedLineP1.x * sin(Angle);
 	TransformedLineP2.x = TransformedLineP2.y * cos(Angle) - TransformedLineP2.x * sin(Angle);
 
-	// Draw wall / line.
-	DrawLineWithOffset((ViewWidth/2 - TransformedLineP1.x), (ViewHeight / 2 - TransformedLineP1.z), (ViewWidth / 2 - TransformedLineP2.x), (ViewHeight / 2 - TransformedLineP2.z), Offset);
-
 
 
 
@@ -383,11 +513,6 @@ void RenderWall(WallLine wallLine)
 
 	TransformedLightPos.x = (player.y - LightPos.x) * cos(Angle) + ( LightPos.y - player.x) * -sin(Angle);
 	TransformedLightPos.y = (player.y - LightPos.x) * sin(Angle) + (LightPos.y - player.x) * cos(Angle);
-
-	DrawPixelWithOffset(
-		(float)ViewWidth / 2 - TransformedLightPos.x,
-		(float)ViewHeight / 2 - TransformedLightPos.y,
-		Offset);
 
 	Vector2 MiddleOfWall;
 
@@ -400,23 +525,11 @@ void RenderWall(WallLine wallLine)
 	MiddleOfWall.x = TransformedLineP1.x - HalfOfWallXDistance;
 	MiddleOfWall.y = TransformedLineP1.z - HalfOfWallYDistance;
 
-	// Draw middle of wall pixel
-	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-	DrawPixelWithOffset((ViewWidth/2) - MiddleOfWall.x, (ViewHeight/2) - MiddleOfWall.y, Offset);
-	
 	Vector2 VectorToLight = { MiddleOfWall.x - TransformedLightPos.x, MiddleOfWall.y - TransformedLightPos.y };
 	float LightDistance = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
 
 	Vector2 VectorToLightNormalised = { VectorToLight.x / LightDistance, VectorToLight.y / LightDistance };
 
-	// Draw line from wall to light
-	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-	SDL_RenderDrawLine(m_renderer,
-		Offset.x + (ViewWidth / 2) - MiddleOfWall.x,
-		Offset.y + (ViewHeight / 2) - MiddleOfWall.y,
-		Offset.x + (ViewWidth / 2) - MiddleOfWall.x + (VectorToLightNormalised.x * 5),
-		Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (VectorToLightNormalised.y * 5)
-	);
 
 	Vector3 WallNormal = Cross(
 		Vector3(HalfOfWallXDistance, HalfOfWallYDistance, 0),
@@ -426,16 +539,6 @@ void RenderWall(WallLine wallLine)
 	WallNormal.Normalise();
 
 	float WallToLightPerpendicularity = Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLightNormalised);
-
-	// Draw wall normal
-	SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
-	SDL_RenderDrawLine(m_renderer,
-		Offset.x + (ViewWidth / 2) - MiddleOfWall.x,
-		Offset.y + (ViewHeight / 2) - MiddleOfWall.y,
-		Offset.x + (ViewWidth / 2) - MiddleOfWall.x + (WallNormal.x * 5),
-		Offset.y + (ViewHeight / 2) - MiddleOfWall.y + (WallNormal.y * 5)
-	);
-
 	
 	float LightScaler = (1.00 / MaxLightDistance) * abs(LightDistance);
 	LightScaler = WallToLightPerpendicularity - LightScaler;
@@ -516,37 +619,37 @@ void RenderWall(WallLine wallLine)
 
 		
 		// Clip walls with left & right side of view pane
-		if (Wall.x1 <= -ViewWidth / 2 + 1) // clip wall pt1 left
+		if (Wall.x1 <= -WindowWidth / 2 + 1) // clip wall pt1 left
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -ViewWidth / 2 + 1, -ViewHeight / 2, -ViewWidth / 2 + 1, ViewHeight / 2);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -ViewWidth / 2 + 1, -ViewHeight / 2, -ViewWidth / 2 + 1, ViewHeight / 2);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -WindowWidth / 2 + 1, -WindowHeight / 2, -WindowWidth / 2 + 1, WindowHeight / 2);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -WindowWidth / 2 + 1, -WindowHeight / 2, -WindowWidth / 2 + 1, WindowHeight / 2);
 			Wall.x1 = PerspectiveViewClipPosTop.x;
 			Wall.y1a = PerspectiveViewClipPosTop.y;
 			Wall.y1b = PerspectiveViewClipPosBottom.y;
 		}
 		
-		if (Wall.x2 <= -ViewWidth / 2 + 1) // clip wall pt2 left
+		if (Wall.x2 <= -WindowWidth / 2 + 1) // clip wall pt2 left
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -ViewWidth / 2 + 1, -ViewHeight / 2, -ViewWidth / 2 + 1, ViewHeight / 2);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -ViewWidth / 2 + 1, -ViewHeight / 2, -ViewWidth / 2 + 1, ViewHeight / 2);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -WindowWidth / 2 + 1, -WindowHeight / 2, -WindowWidth / 2 + 1, WindowHeight / 2);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -WindowWidth / 2 + 1, -WindowHeight / 2, -WindowWidth / 2 + 1, WindowHeight / 2);
 			Wall.x2 = PerspectiveViewClipPosTop.x;
 			Wall.y2a = PerspectiveViewClipPosTop.y;
 			Wall.y2b = PerspectiveViewClipPosBottom.y;
 		}
 		
-		if (Wall.x1 >= ViewWidth / 2 - 1) // clip wall pt1 right
+		if (Wall.x1 >= WindowWidth / 2 - 1) // clip wall pt1 right
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, ViewWidth / 2 - 2, -ViewHeight / 2, ViewWidth / 2 - 2, ViewHeight / 2);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, ViewWidth / 2 - 2, -ViewHeight / 2, ViewWidth / 2 - 2, ViewHeight / 2);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, WindowWidth / 2 - 2, -WindowHeight / 2, WindowWidth / 2 - 2, WindowHeight / 2);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, WindowWidth / 2 - 2, -WindowHeight / 2, WindowWidth / 2 - 2, WindowHeight / 2);
 			Wall.x1 = PerspectiveViewClipPosTop.x;
 			Wall.y1a = PerspectiveViewClipPosTop.y;
 			Wall.y1b = PerspectiveViewClipPosBottom.y;
 		}
 
-		if (Wall.x2 >= ViewWidth / 2 - 1) // clip wall pt2 right
+		if (Wall.x2 >= WindowWidth / 2 - 1) // clip wall pt2 right
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, ViewWidth / 2 - 2, -ViewHeight / 2, ViewWidth / 2 - 2, ViewHeight / 2);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, ViewWidth / 2 - 2, -ViewHeight / 2, ViewWidth / 2 - 2, ViewHeight / 2);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, WindowWidth / 2 - 2, -WindowHeight / 2, WindowWidth / 2 - 2, WindowHeight / 2);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, WindowWidth / 2 - 2, -WindowHeight / 2, WindowWidth / 2 - 2, WindowHeight / 2);
 			Wall.x2 = PerspectiveViewClipPosTop.x;
 			Wall.y2a = PerspectiveViewClipPosTop.y;
 			Wall.y2b = PerspectiveViewClipPosBottom.y;
@@ -584,29 +687,29 @@ void RenderWall(WallLine wallLine)
 					
 
 				float WallDrawTop = Wall.y1a + YDeltaTop; // Set max wall height.
-				if (WallDrawTop < -ViewHeight / 2)
-					WallDrawTop = -ViewHeight / 2;
+				if (WallDrawTop < -WindowHeight / 2)
+					WallDrawTop = -WindowHeight / 2;
 
 				float WallDrawBottom = Wall.y1b - YDeltaBottom; // Set wall height... whatever?.
-				if (WallDrawBottom > ViewHeight / 2)
-					WallDrawBottom = ViewHeight / 2;
+				if (WallDrawBottom > WindowHeight / 2)
+					WallDrawBottom = WindowHeight / 2;
 
 
 				// Change render colour to the ceiling color
 				SDL_SetRenderDrawColor(m_renderer, CeilingColor.r, CeilingColor.g, CeilingColor.b, CeilingColor.a);
-				DrawLineWithOffset(ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawTop, ViewWidth / 2 + cl, 1, Offset);
+				DrawLineWithOffset(WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawTop, WindowWidth / 2 + cl, 1, Offset);
 
 
 
 				// Change render colour to the floor color
 				SDL_SetRenderDrawColor(m_renderer, FloorColor.r, FloorColor.g, FloorColor.b, FloorColor.a);
-				DrawLineWithOffset(ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawBottom, ViewWidth / 2 + cl, ViewHeight - 2, Offset);
+				DrawLineWithOffset(WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawBottom, WindowWidth / 2 + cl, WindowHeight - 2, Offset);
 
 
 				// Draw Wall
 				// Change render colour to the wall color
 				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
-				DrawLineWithOffset(ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawTop, ViewWidth / 2 + cl, ViewHeight / 2 + WallDrawBottom, Offset);
+				DrawLineWithOffset(WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawTop, WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawBottom, Offset);
 			}
 
 
@@ -619,7 +722,7 @@ void RenderWall(WallLine wallLine)
 			};
 
 			SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-			DrawPixelWithOffset(ViewWidth / 2 + LightPixel.x, ViewWidth / 2 + LightPixel.y, Offset);
+			DrawPixelWithOffset(WindowWidth / 2 + LightPixel.x, WindowHeight / 2 + LightPixel.y, Offset);
 
 
 			// Change render colour to green
@@ -627,22 +730,20 @@ void RenderWall(WallLine wallLine)
 
 
 			// Draw top line of wall
-			DrawLineWithOffset(ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1a, ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2a, Offset);
+			DrawLineWithOffset(WindowWidth / 2 + Wall.x1, WindowHeight / 2 + Wall.y1a, WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2a, Offset);
 
 			// Draw bottom line of wall
-			DrawLineWithOffset(ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1b, ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2b, Offset);
+			DrawLineWithOffset(WindowWidth / 2 + Wall.x1, WindowHeight / 2 + Wall.y1b, WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2b, Offset);
 
 			// Draw left line of wall
-			DrawLineWithOffset(ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1a, ViewWidth / 2 + Wall.x1, ViewHeight / 2 + Wall.y1b, Offset);
+			DrawLineWithOffset(WindowWidth / 2 + Wall.x1, WindowHeight / 2 + Wall.y1a, WindowWidth / 2 + Wall.x1, WindowHeight / 2 + Wall.y1b, Offset);
 
 			// Draw right line of wall
-			DrawLineWithOffset(ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2a, ViewWidth / 2 + Wall.x2, ViewHeight / 2 + Wall.y2b, Offset);
+			DrawLineWithOffset(WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2a, WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2b, Offset);
 		}
 
 	}
-
-	if (DrawingFirstWall == true)
-		DrawDebugText();
+		
 }
 
 
@@ -653,7 +754,7 @@ int main(int argc, char * argv[])
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
 	TTF_Init();
 
-	SDL_CreateWindowAndRenderer(1680, 1050, 0, &m_window, &m_renderer);
+	SDL_CreateWindowAndRenderer(WindowWidth, WindowHeight, 0, &m_window, &m_renderer);
 	font = TTF_OpenFont("font.ttf", 16);
 
 #ifdef __EMSCRIPTEN__
