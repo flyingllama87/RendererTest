@@ -49,8 +49,8 @@ const int ViewHeight = 300;
 
 // PLAYER DEFS
 
-int CrouchingHeight = 4 * (WindowHeight / 4); // Crouching Height
-int StandingHeight = 10 * (WindowHeight / 4); // standing height.
+int CrouchingHeight = 4 * (WindowHeight / 2); // Crouching Height
+int StandingHeight = 10 * (WindowHeight / 2); // standing height.
 
 int PlayerHeight = StandingHeight; // Start standing.
 Player player = { 10, 10 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
@@ -595,12 +595,12 @@ void RenderWall(WallLine wallLine)
 			}
 		}
 
-		// *** PERSPECTIVE DIVIDE *** What are FOV values?
+		// *** PERSPECTIVE DIVIDE *** What are FOV values? HFOV = 53.13 degrees according to calcs. VFOV = ?
 
 		// x and y scalars are set depending on window height and width
 
 		int xscale = PerspectiveView.w;
-		int yscale = PerspectiveView.h * 4;
+		int yscale = PerspectiveView.h * 8;
 
 		if (PlayerHeight == CrouchingHeight)
 		{
@@ -609,13 +609,13 @@ void RenderWall(WallLine wallLine)
 
 		Wall.x1 = -(TransformedLineP1.x * xscale) / (TransformedLineP1.z); // Perspective divides to get verticies co-ords of wall to draw.
 		
-		Wall.y1a = -yscale / (TransformedLineP1.z / 2);
-		Wall.y1b = PlayerHeight / (TransformedLineP1.z / 2);
+		Wall.y1a = -yscale / (TransformedLineP1.z);
+		Wall.y1b = PlayerHeight / (TransformedLineP1.z);
 
 		Wall.x2 = -(TransformedLineP2.x * xscale) / (TransformedLineP2.z);
 		
-		Wall.y2a = -yscale / (TransformedLineP2.z / 2);
-		Wall.y2b = PlayerHeight / (TransformedLineP2.z / 2);
+		Wall.y2a = -yscale / (TransformedLineP2.z);
+		Wall.y2b = PlayerHeight / (TransformedLineP2.z);
 
 
 		
