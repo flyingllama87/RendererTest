@@ -3,7 +3,7 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include "Utils.h"
-
+#include <cassert>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -19,7 +19,7 @@ WARNING:  This code is messy & purely PoC.  You've been warned.
 TO DO:
 - Code clean up & break program into separate files.
 - Better clipping.
-
+- Make mobile friendly?
 
 FEATURES TO IMPLEMENT:
 - Optomisation
@@ -313,12 +313,12 @@ void DrawDebugText()
 	// Draw info text
 	sprintf(message,
 		"Player X is %.2f, Player Y is %.2f. \n"
-		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n" 
-		" Debug1 val & Debug2 val: %.2f %.2f \n\n"
-		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, left ctrl to crouch\nPress q to quit.",
+		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n" 
+		// " Debug1 val & Debug2 val: %.2f %.2f \n\n"
+		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light, left ctrl to crouch\nPress q to quit.",
 		player.x, player.y, //Player position
-		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle),
-		debug1, debug2
+		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle)
+		// debug1, debug2
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -685,7 +685,7 @@ void RenderWall(WallLine wallLine)
 		float WallEndX = AbsoluteLineP1.x + (WallTotalXChange * WallClipEnd);
 		float WallEndY = AbsoluteLineP1.y + (WallTotalYChange * WallClipEnd);
 
-		// debug info stuff
+		// debug info 
 		debug1 = WallStartY;
 		debug2 = WallEndY;
 
@@ -755,10 +755,21 @@ void RenderWall(WallLine wallLine)
 				// WallStep = LightStep;
 				// d_TotalWallWidth = TotalWallWidth;
 
+				if (isnan(LightScaler))
+				{
+					LightScaler = 0.0;
+				}
+
+				int R = wallLine.wallColor.r * LightScaler;
+				int G = wallLine.wallColor.g * LightScaler;
+				int B = wallLine.wallColor.b * LightScaler;
+
 
 				// Draw Wall
 				// Change render colour to the wall color & apply lighting.  Lines are drawn relative to the centre of the player's view.
-				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
+
+				// SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r, wallLine.wallColor.g, wallLine.wallColor.b, wallLine.wallColor.a);
+				SDL_SetRenderDrawColor(m_renderer, R, G, B, wallLine.wallColor.a);
 				DrawLineWithOffset(WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawTop, WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawBottom, Offset);
 			}
 
