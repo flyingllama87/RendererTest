@@ -92,6 +92,8 @@ int WallNo; // Used to track which wall we are processing.  Debugging only.
 int WallLightingIndexMin = 0, WallLightingIndexMax = 0;
 float d_TotalWallWidth = 0;
 float WallStep = 0;
+float debug1; //generic debug value
+float debug2; // generic debug value
 
 bool LoadMap()
 {
@@ -312,11 +314,11 @@ void DrawDebugText()
 	sprintf(message,
 		"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n" 
-		"Lighting Index Min & Max: %d %d WallStep & TotalWallWidth: %.2f %.2f, ratio %.2f \n\n"
+		" Debug1 val & Debug2 val: %.2f %.2f \n\n"
 		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, left ctrl to crouch\nPress q to quit.",
 		player.x, player.y, //Player position
 		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle),
-		WallLightingIndexMin, WallLightingIndexMax, WallStep, d_TotalWallWidth, d_TotalWallWidth / WallStep
+		debug1, debug2
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -601,55 +603,15 @@ void RenderWall(WallLine wallLine)
 		TransformedLightPos.x = (player.y - LightPos.y) * cos(Angle) - (LightPos.x - player.x) * sin(Angle);
 		TransformedLightPos.y = (player.y - LightPos.y) * sin(Angle) + (LightPos.x - player.x) * cos(Angle);
 
-		// This code depends on the clockwise winding order of the wall points.  Consider a counter clockwise case?
-		float WallTotalXChange = AbsoluteLineP2.x - AbsoluteLineP1.x;
-		float WallTotalYChange = AbsoluteLineP2.y - AbsoluteLineP1.y;
-
-		// Define array of wall length, calculate light value for each position / pixel of wall length, use this data to apply light value to wall in screen space.
-
-		int LineLength = (int)sqrt(WallTotalXChange * WallTotalXChange + WallTotalYChange * WallTotalYChange);
-
-		Vector2 VectorToLight;
-		float DistanceToLight;
 
 
-		float *WallLightScaler = new float[LineLength];
 
-		float WallXDeltaPerStep = WallTotalXChange / LineLength;
-		float WallYDeltaPerStep = WallTotalYChange / LineLength;
 
-		for (int counter = 0; counter < LineLength; counter++)
-		{
-			float CurrentXWallPoint = AbsoluteLineP1.x + (WallXDeltaPerStep * counter);
-			float CurrentYWallPoint = AbsoluteLineP1.y + (WallYDeltaPerStep * counter);
 
-			VectorToLight = { LightPos.x - CurrentXWallPoint, LightPos.y - CurrentYWallPoint };
-			DistanceToLight = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
+		float LeftMostWallPreClip = min(Wall.x1, Wall.x2);
+		float RightMostWallPreClip = max(Wall.x1, Wall.x2);
 
-			// Normalise the VectorToLight
-			VectorToLight = { VectorToLight.x / DistanceToLight , VectorToLight.y / DistanceToLight };
-
-			Vector3 WallNormal = Cross( // What happens if one of these are 0?
-				Vector3(WallTotalXChange, WallTotalYChange, 0),
-				Vector3(0, 0, -1)
-			);
-
-			WallNormal.Normalise();
-
-			float WallToLightPerpendicularity = Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLight);
-
-			float LightScaler = (1.00 / MaxLightDistance) * abs(DistanceToLight);
-			LightScaler = WallToLightPerpendicularity - LightScaler;
-			LightScaler = Clamp(LightScaler, 0.33, 1.0); // Min value of light scaler is 0.33 / equiv to ambient light.
-
-			WallLightScaler[counter] = LightScaler;
-
-		}
-
-		float LeftMostWallTemp = min(Wall.x1, Wall.x2);
-		float RightMostWallTemp = max(Wall.x1, Wall.x2);
-
-		float WallWidthTemp = RightMostWallTemp - LeftMostWallTemp;
+		float WallWidthPreClip = RightMostWallPreClip - LeftMostWallPreClip;
 
 		float AmountOfWallLeftClipped = 0.0, AmountOfWallRightClipped = 0.0; // Used to lighting calcs.  Lighting calcs are performed on the entire wall but often only a portion of the wall is shown so we need to know how much of wall was clipped.
 		
@@ -709,18 +671,63 @@ void RenderWall(WallLine wallLine)
 
 		float WallWidth = RightMostWall - LeftMostWall;
 
-		if (WallNo == 1) // can be removed
-		{
-			int test = 0;
-			test++;
-
-		}
 		
+		float WallClipStart = abs(AmountOfWallLeftClipped) / abs(WallWidthPreClip);
+		float WallClipEnd = (abs(AmountOfWallLeftClipped) + abs(WallWidth)) / abs(WallWidthPreClip);
+
+		// This code depends on the clockwise winding order of the wall points.  Consider a counter clockwise case?
+		float WallTotalXChange = AbsoluteLineP2.x - AbsoluteLineP1.x;
+		float WallTotalYChange = AbsoluteLineP2.y - AbsoluteLineP1.y;
+
+		float WallStartX = AbsoluteLineP1.x + (WallTotalXChange * WallClipStart);
+		float WallStartY = AbsoluteLineP1.y + (WallTotalYChange * WallClipStart);
+
+		float WallEndX = AbsoluteLineP1.x + (WallTotalXChange * WallClipEnd);
+		float WallEndY = AbsoluteLineP1.y + (WallTotalYChange * WallClipEnd);
+
+		// debug info stuff
+		debug1 = WallStartY;
+		debug2 = WallEndY;
+
+		float WallTotalVisibleXChange = WallEndX - WallStartX;
+		float WallTotalVisibleYChange = WallEndY - WallStartY;
+
+		Vector2 VectorToLight;
+		float DistanceToLight;
 
 		if (WallWidth != 0)
 		{
+
+			float StepXDelta = WallTotalVisibleXChange / WallWidth;
+			float StepYDelta = WallTotalVisibleYChange / WallWidth;
+
 			for (int cl = LeftMostWall; cl <= RightMostWall; ++cl) // Loop over each x position of the wall. cl = current vertical line
 			{
+
+				
+				float CurrentXWallPoint = WallStartX + (StepXDelta * (cl - LeftMostWall));
+				float CurrentYWallPoint = WallStartY + (StepYDelta * (cl - LeftMostWall));
+
+				VectorToLight = { LightPos.x - CurrentXWallPoint, LightPos.y - CurrentYWallPoint };
+				DistanceToLight = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
+
+				// Normalise the VectorToLight
+				VectorToLight = { VectorToLight.x / DistanceToLight , VectorToLight.y / DistanceToLight };
+
+				Vector3 WallNormal = Cross( // What happens if one of these are 0?
+					Vector3(StepXDelta * (cl - LeftMostWall), StepYDelta * (cl - LeftMostWall), 0),
+					Vector3(0, 0, -1)
+				);
+
+				WallNormal.Normalise();
+
+				float WallToLightPerpendicularity = Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLight);
+
+				float LightScaler = (1.00 / MaxLightDistance) * abs(DistanceToLight);
+				LightScaler = WallToLightPerpendicularity - LightScaler;
+				LightScaler = Clamp(LightScaler, 0.33, 1.0); // Min value of light scaler is 0.33 / equiv to ambient light.
+
+
 
 				YDeltaTop = (cl - LeftMostWall) * (HeightDeltaTop / WallWidth); // Calculate the change in Y position for the current vertical line.  Used for the ceiling vertical line.
 				YDeltaBottom = (cl - LeftMostWall) * (HeightDeltaBottom / WallWidth); // Calculate the change in Y position for the current vertical line.  Used for the floor vertical line.
@@ -743,29 +750,15 @@ void RenderWall(WallLine wallLine)
 				// Change render colour to the floor color.  Lines are drawn relative to the centre of the player's view.
 				SDL_SetRenderDrawColor(m_renderer, FloorColor.r, FloorColor.g, FloorColor.b, FloorColor.a);
 				DrawLineWithOffset(WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawBottom, WindowWidth / 2 + cl, WindowHeight - 2, Offset);
-
-				int CurrentLightStep;
-
-				// Calculate how much of the pre-calculated light data we will use.  We don't use any of the data that would corrospond to clipped wall areas. 
-
-				float TotalWallWidth = (abs(AmountOfWallLeftClipped) + abs(WallWidth) + abs(AmountOfWallRightClipped)); 
-				float LightStep = TotalWallWidth / LineLength;
-
-				CurrentLightStep = abs(AmountOfWallLeftClipped) / LightStep;
-				CurrentLightStep += abs(LeftMostWall - cl) / LightStep;
-				if (abs(AmountOfWallRightClipped) > 0 && CurrentLightStep > (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep)
-					CurrentLightStep = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
-
-				// debug info stuff
-				WallLightingIndexMin = abs(AmountOfWallLeftClipped) / LightStep;
-				WallLightingIndexMax = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
-				WallStep = LightStep;
-				d_TotalWallWidth = TotalWallWidth;
+				
+	
+				// WallStep = LightStep;
+				// d_TotalWallWidth = TotalWallWidth;
 
 
 				// Draw Wall
 				// Change render colour to the wall color & apply lighting.  Lines are drawn relative to the centre of the player's view.
-				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r * WallLightScaler[CurrentLightStep], wallLine.wallColor.g * WallLightScaler[CurrentLightStep], wallLine.wallColor.b * WallLightScaler[CurrentLightStep], wallLine.wallColor.a);
+				SDL_SetRenderDrawColor(m_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
 				DrawLineWithOffset(WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawTop, WindowWidth / 2 + cl, WindowHeight / 2 + WallDrawBottom, Offset);
 			}
 
@@ -798,8 +791,6 @@ void RenderWall(WallLine wallLine)
 			// Draw right line of wall
 			DrawLineWithOffset(WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2a, WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2b, Offset);
 		}
-
-		delete[] WallLightScaler;
 
 	}
 		
