@@ -20,16 +20,19 @@ SDL_Event event; // Used for event SDL events.
 
 // **** UTILITY FUNCTIONS ****
 
+
+// Offset functions make it easy to have multiple viewports
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset)
 {
 	SDL_RenderDrawLine(m_renderer, x1 + offset.x, y1 + offset.y, x2 + offset.x, y2 + offset.y);
 }
 
-
 void DrawPixelWithOffset(float x, float y, SDL_Point offset)
 {
 	SDL_RenderDrawPoint(m_renderer, x + offset.x, y + offset.y);
 }
+
+// *** GENERIC MATH FUNCTIONS ***
 
 // Provides determinate.
 float Determinate(float x1, float y1, float x2, float y2)
@@ -51,31 +54,6 @@ Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, fl
 
 	return RetPoint;
 }
-
-
-bool IsPlayerCollidingWithWall()
-{
-
-	for (WallLine wall : AllWalls)
-	{
-		if (!PlayerInBounds(Vector2(wall.PT1x, wall.PT1y), Vector2(wall.PT2x, wall.PT2y) ))
-			return true;
-	}
-
-	return false;
-
-}
-
-bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2) // Figure out which side of wall player is on.  See https://stackoverflow.com/questions/1560492/how-to-tell-whether-a-point-is-to-the-right-or-left-side-of-a-line#3461533
-{
-	// Get determinate of matrix made 2 vectors.  1 = WallPt1 - WallPt2, 2 = WallPt1 - Player. 
-	double det = (WallPt1.x - WallPt2.x) * (WallPt1.y - player.y) - (WallPt1.x - player.x) * (WallPt1.y - WallPt2.y);
-	if (det > 0.0)
-		return true;
-	else
-		return false;
-}
-
 
 float Dot(Vector2 first, Vector2 second) // Calculate vector2 dot product.
 {
@@ -99,4 +77,29 @@ float Clamp(float Clampee, float MinVal, float MaxVal)
 	if (Clampee > MaxVal)
 		Clampee = MaxVal;
 	return Clampee;
+}
+
+// ** GENERIC PHYSICS FUNCTIONS **
+
+bool IsPlayerCollidingWithWall()
+{
+
+	for (WallLine wall : AllWalls)
+	{
+		if (!PlayerInBounds(Vector2(wall.PT1x, wall.PT1y), Vector2(wall.PT2x, wall.PT2y)))
+			return true;
+	}
+
+	return false;
+
+}
+
+bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2) // Figure out which side of wall player is on.  See https://stackoverflow.com/questions/1560492/how-to-tell-whether-a-point-is-to-the-right-or-left-side-of-a-line#3461533
+{
+	// Get determinate of matrix made 2 vectors.  1 = WallPt1 - WallPt2, 2 = WallPt1 - Player. 
+	double det = (WallPt1.x - WallPt2.x) * (WallPt1.y - player.y) - (WallPt1.x - player.x) * (WallPt1.y - WallPt2.y);
+	if (det > 0.0)
+		return true;
+	else
+		return false;
 }
