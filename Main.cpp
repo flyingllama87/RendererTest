@@ -53,7 +53,7 @@ int CrouchingHeight = 4 * (WindowHeight / 2); // Crouching Height
 int StandingHeight = 10 * (WindowHeight / 2); // standing height.
 
 int PlayerHeight = StandingHeight; // Start standing.
-Player player = { 10, 10 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
+Player player = { 25, 25 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
 double Angle = 1.5700000f; // starting angle for player.
 
 
@@ -69,7 +69,7 @@ SDL_Color FloorColor = { 192,192,192,255 };
 
 float LightSize = 50.0;
 
-Vector2 LightPos = { 30, 10 };
+Vector2 LightPos = { 10, 10 };
 float MaxLightDistance = 150;
 float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 
@@ -220,8 +220,8 @@ void HandleInput()
 		case SDLK_r:
 			player.x = 25;
 			player.y = 25;
-			Angle = 3.141500000;
-			LightPos.x = 2; LightPos.y = 25;
+			Angle = 0.00001f;
+			LightPos.x = 5; LightPos.y = 25;
 			break;
 		case SDLK_t:
 			Angle += 45.0 / (180 / M_PI);
@@ -569,6 +569,7 @@ void RenderWall(WallLine wallLine)
 			}
 		}
 
+
 		// *** PERSPECTIVE DIVIDE *** What are FOV values? HFOV = 53.13 degrees according to calcs. VFOV = ?
 
 		// x and y scalars are set depending on window height and width
@@ -745,23 +746,21 @@ void RenderWall(WallLine wallLine)
 
 				int CurrentLightStep;
 
-				if (WallWidth != 0)
-				{
-					float TotalWallWidth = (abs(AmountOfWallLeftClipped) + abs(WallWidth) + abs(AmountOfWallRightClipped));
-					float LightStep = TotalWallWidth / LineLength;
-					CurrentLightStep = abs(AmountOfWallLeftClipped) / LightStep;
-					CurrentLightStep += abs(LeftMostWall - cl) / LightStep;
-					if (abs(AmountOfWallRightClipped) > 0 && CurrentLightStep > (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep)
-						CurrentLightStep = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
-					WallLightingIndexMin = abs(AmountOfWallLeftClipped) / LightStep;
-					WallLightingIndexMax = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
-					WallStep = LightStep;
-					d_TotalWallWidth = TotalWallWidth;
+				// Calculate how much of the pre-calculated light data we will use.  We don't use any of the data that would corrospond to clipped wall areas. 
 
-				}
-				else
-					CurrentLightStep = 1;
+				float TotalWallWidth = (abs(AmountOfWallLeftClipped) + abs(WallWidth) + abs(AmountOfWallRightClipped)); 
+				float LightStep = TotalWallWidth / LineLength;
 
+				CurrentLightStep = abs(AmountOfWallLeftClipped) / LightStep;
+				CurrentLightStep += abs(LeftMostWall - cl) / LightStep;
+				if (abs(AmountOfWallRightClipped) > 0 && CurrentLightStep > (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep)
+					CurrentLightStep = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
+
+				// debug info stuff
+				WallLightingIndexMin = abs(AmountOfWallLeftClipped) / LightStep;
+				WallLightingIndexMax = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
+				WallStep = LightStep;
+				d_TotalWallWidth = TotalWallWidth;
 
 
 				// Draw Wall
