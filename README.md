@@ -55,7 +55,10 @@ Compiles under VS2017, GCC or Emscripten.  Just need SDL2 + SDL2TTF.
 
 ** Emscripten example: **
 
-em++ -O3 -s USE_SDL=2 -s -s USE_SDL_TTF=2 --preload-file font.ttf source.cpp -o render_test.html --shell-file shell-minimal.html -s WASM=1
+em++ -O3 -std=c++11 -s USE_SDL=2 -s USE_SDL_TTF=2 --preload-file font.ttf -o render_test.html --shell-file shell-minimal.html -s WASM=1 Main.cpp Utils.cpp
+
+DEBUG:
+em++ -std=c++11 -s USE_SDL=2 -s USE_SDL_TTF=2 --preload-file font.ttf -o render_test.html --shell-file shell-minimal.html -s WASM=1 Main.cpp Utils.cpp -g4
 
 ** Credits: ** 
 
