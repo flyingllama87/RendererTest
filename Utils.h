@@ -7,18 +7,17 @@ struct Vector3;
 struct WallLine;
 struct WallData;
 
-// *** GLOBAL DATA ***
+// *** GLOBAL DATA DECLARATIONS ***
 
 
 extern SDL_Color colorRed; // used for text
 
-// SDL vars:
+// SDL specific vars:
 extern TTF_Font *font;
 extern SDL_Window *m_window;
 extern SDL_Renderer *m_renderer;
 
 extern SDL_Event event; // Used for tracking SDL events.
-
 
 extern Player player;
 
@@ -83,7 +82,7 @@ typedef struct Vector3
 
 } Vector3;
 
-typedef struct WallData // Data struct with vertices needed to draw 2.5D wall
+typedef struct WallData // Data struct with vertex values in screen space. Needed to draw wall in 3D view
 {
 	float x1, x2;
 	float y1a, y2a;
@@ -107,10 +106,11 @@ bool LoadMap();
 void RenderWall(WallLine wallLine);
 void RenderDebug(WallLine wallLine);
 
+// Offset functions make it easy to have multiple viewports
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset);
 void DrawPixelWithOffset(float x, float y, SDL_Point offset);
-// Offset functions make it easy to have multiple viewports
 
+// Generic math functions
 float Dot(Vector2 first, Vector2 second); // Calculate vector2 dot product.
 Vector3 Cross(Vector3 first, Vector3 second); // Calculate Vector 3 cross product.
 float Clamp(float Clampee, float MinVal, float MaxVal);
@@ -120,6 +120,8 @@ float Determinate(float x1, float y1, float x2, float y2);
 #define min(a,b) (((a) < (b)) ? (a) : (b)) // min: Choose smaller of two scalars.
 #define max(a,b) (((a) > (b)) ? (a) : (b)) // max: Choose greater of two scalars.
 
+
+// Physics functions
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
 bool IsPlayerCollidingWithWall();
 
