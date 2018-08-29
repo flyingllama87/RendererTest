@@ -89,7 +89,9 @@ int InfoTextureWidth;
 int InfoTextureHeight;
 bool DrawingLastWall = false;
 int WallNo; // Used to track which wall we are processing.  Debugging only.
-
+int WallLightingIndexMin = 0, WallLightingIndexMax = 0;
+float d_TotalWallWidth = 0;
+float WallStep = 0;
 
 bool LoadMap()
 {
@@ -230,11 +232,17 @@ void HandleInput()
 		case SDLK_y:
 			Angle += 0.000001 / (180 / M_PI);
 			break;
-		case SDLK_l:
+		case SDLK_k:
 			if (LightPos.x > 0 && LightPos.x <= 100)
 				LightPos.x += 1;
 			else if (LightPos.x > 100)
 				LightPos.x = 1;
+			break;
+		case SDLK_l:
+			if (LightPos.y > 0 && LightPos.y <= 50)
+				LightPos.y += 1;
+			else if (LightPos.y > 50)
+				LightPos.y = 1;
 			break;
 		case SDLK_LCTRL:
 			PlayerHeight = CrouchingHeight;
@@ -303,10 +311,12 @@ void DrawDebugText()
 	// Draw info text
 	sprintf(message,
 		"Player X is %.2f, Player Y is %.2f. \n"
-		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n"
+		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n" 
+		"Lighting Index Min & Max: %d %d WallStep & TotalWallWidth: %.2f %.2f, ratio %.2f \n\n"
 		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, left ctrl to crouch\nPress q to quit.",
 		player.x, player.y, //Player position
-		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle)
+		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle),
+		WallLightingIndexMin, WallLightingIndexMax, WallStep, d_TotalWallWidth, d_TotalWallWidth / WallStep
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -584,13 +594,11 @@ void RenderWall(WallLine wallLine)
 
 		// LIGHTING CALCULATIONS (2D / Height not taken into account)
 
-		// Calculate light position based on player's position.  Doesn't really need to happen for every wall draw.  Only needs to happen each frame.  Also doesn't need to be transformed as these values could be calculated using 'absolute' values.
+		// Calculate light position.
 		Vector2 TransformedLightPos;
 
 		TransformedLightPos.x = (player.y - LightPos.y) * cos(Angle) - (LightPos.x - player.x) * sin(Angle);
 		TransformedLightPos.y = (player.y - LightPos.y) * sin(Angle) + (LightPos.x - player.x) * cos(Angle);
-
-		Vector2 MiddleOfWall;
 
 		// This code depends on the clockwise winding order of the wall points.  Consider a counter clockwise case?
 		float WallTotalXChange = AbsoluteLineP2.x - AbsoluteLineP1.x;
@@ -684,7 +692,7 @@ void RenderWall(WallLine wallLine)
 			Wall.y2a = PerspectiveViewClipPosTop.y;
 			Wall.y2b = PerspectiveViewClipPosBottom.y;
 		}
-
+		
 
 
 		// Calculations for drawing the vertical lines of the wall, floor and ceiling.
@@ -740,13 +748,16 @@ void RenderWall(WallLine wallLine)
 				if (WallWidth != 0)
 				{
 					float TotalWallWidth = (abs(AmountOfWallLeftClipped) + abs(WallWidth) + abs(AmountOfWallRightClipped));
-					//float LightStepTempTotal = LightStepTotal
 					float LightStep = TotalWallWidth / LineLength;
 					CurrentLightStep = abs(AmountOfWallLeftClipped) / LightStep;
 					CurrentLightStep += abs(LeftMostWall - cl) / LightStep;
-					// if (abs(LeftMostWall - cl) )
 					if (abs(AmountOfWallRightClipped) > 0 && CurrentLightStep > (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep)
 						CurrentLightStep = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
+					WallLightingIndexMin = abs(AmountOfWallLeftClipped) / LightStep;
+					WallLightingIndexMax = (TotalWallWidth - abs(AmountOfWallRightClipped)) / LightStep;
+					WallStep = LightStep;
+					d_TotalWallWidth = TotalWallWidth;
+
 				}
 				else
 					CurrentLightStep = 1;
@@ -788,6 +799,8 @@ void RenderWall(WallLine wallLine)
 			// Draw right line of wall
 			DrawLineWithOffset(WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2a, WindowWidth / 2 + Wall.x2, WindowHeight / 2 + Wall.y2b, Offset);
 		}
+
+		delete[] WallLightScaler;
 
 	}
 		
