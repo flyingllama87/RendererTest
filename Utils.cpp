@@ -84,7 +84,7 @@ float Clamp(float Clampee, float MinVal, float MaxVal)
 bool IsPlayerCollidingWithWall()
 {
 
-	for (WallLine wall : AllWalls)
+	for (auto& wall : AllWalls)
 	{
 		if (!PlayerInBounds(Vector2(wall.PT1x, wall.PT1y), Vector2(wall.PT2x, wall.PT2y)))
 			return true;
@@ -103,4 +103,14 @@ bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2) // Figure out which side o
 		return true;
 	else
 		return false;
+}
+
+Vector2 Lerp(Vector2 Start, Vector2 End, float t)
+{
+	Vector2 ReturnVector;
+	t = Clamp(t, 0.0, 1.0);
+	ReturnVector.x = Start.x + ((End.x - Start.x) * t);
+	ReturnVector.y = Start.y + ((End.y - Start.y) * t);
+
+	return ReturnVector;
 }

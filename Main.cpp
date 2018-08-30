@@ -41,12 +41,12 @@ FEATURES TO IMPLEMENT:
 
 // **** GLOBAL DATA ****
 
-
+int TickCount = 0, PreviousTickCount, fps; // used for fps monitor
 
 bool ContinueGame = true; // used as a conditional for exiting the app.
 
-const int ViewWidth = 300;
-const int ViewHeight = 300;
+const int ViewWidth = 256;
+const int ViewHeight = 256;
 
 
 // PLAYER DEFS
@@ -55,12 +55,12 @@ float CrouchingHeight = 2 * WindowHeight; // Crouching Height
 float StandingHeight = 5 * WindowHeight; // standing height.
 
 float PlayerHeight = StandingHeight; // Start standing.
-Player player = { 25, 25 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
-double Angle = 1.5700000f; // starting angle for player.
+Player player = { 30, 25 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
+double Angle = 3.1415926f; // starting angle for player.
 
 
 
-						   // WALL DEFS
+// WALL DEFS
 
 SDL_Color CeilingColor = { 64,64,64,255 };
 SDL_Color FloorColor = { 192,192,192,255 };
@@ -70,23 +70,24 @@ SDL_Color FloorColor = { 192,192,192,255 };
 // LIGHTING DEFS
 
 float LightSize = 50.0;
-
-Vector2 LightPos = { 10, 10 };
-float MaxLightDistance = 150;
+Vector2 LightPos = { 1, 25 };
+float MaxLightDistance = 100;
 float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
-
+bool bReverseDirection = false;
+int CurrentLerpInterval = 0;
+int TotalLerpInterval = 5000;
 
 std::vector<WallLine> AllWalls;
 
 SDL_Point Offset; // used for setting an 'offset' for each view.
 
-				  // VIEW DEFS x, y, w, h
-SDL_Rect AbsoluteView = { 15, 15, ViewWidth, ViewHeight };
-SDL_Rect TransformedView = { WindowWidth - ViewWidth - 15, 15, ViewWidth, ViewHeight };
+// VIEW DEFS x, y, w, h
+SDL_Rect AbsoluteView = { 16, 16, ViewWidth, ViewHeight };
+SDL_Rect TransformedView = { WindowWidth - ViewWidth - 16, 16, ViewWidth, ViewHeight };
 SDL_Rect PerspectiveView = { 0, 0, WindowWidth, WindowHeight };
 
 // DEBUG: Following is used for debug text/message only:
-char message[3000] = "";
+char message[1000] = "";
 int InfoTextureWidth;
 int InfoTextureHeight;
 bool DrawingLastWall = false;
@@ -268,6 +269,29 @@ void HandleInput()
 	}
 }
 
+void MoveLight()
+{
+	int TickDelta = TickCount - PreviousTickCount;
+	CurrentLerpInterval += TickDelta;
+	float t = (float)CurrentLerpInterval / (float)TotalLerpInterval;
+
+	if (!bReverseDirection)
+	{
+		LightPos = Lerp(Vector2(1, 25), Vector2(99, 25), t);
+	}
+	else
+	{
+		LightPos = Lerp(Vector2(99, 25), Vector2(1, 25), t);
+	}
+
+	if (CurrentLerpInterval > TotalLerpInterval)
+	{
+		bReverseDirection = !bReverseDirection;
+		CurrentLerpInterval = 0;
+	}
+
+}
+
 
 void MainLoop() // Primary game loop.  Structured in this way (separate function) so code can be compiled with emscripten easily.
 {
@@ -281,6 +305,15 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
 	SDL_RenderClear(m_renderer);
 
+	// Calculate FPS
+
+	PreviousTickCount = TickCount;
+	TickCount = SDL_GetTicks();
+	int TickDelta = TickCount - PreviousTickCount;
+
+	fps = 1000 / TickDelta;
+
+	MoveLight();
 
 	// RenderWalls
 
@@ -316,10 +349,12 @@ void DrawDebugText()
 {
 	// Draw info text
 	sprintf(message,
+		"FPS: %d \n"
 		"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n"
 		// " Debug1 val & Debug2 val: %.2f %.2f \n\n"
 		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light, left ctrl to crouch\nPress q to quit.",
+		fps,
 		player.x, player.y, //Player position
 		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle)
 		// debug1, debug2

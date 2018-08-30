@@ -120,6 +120,7 @@ float Determinate(float x1, float y1, float x2, float y2);
 #define min(a,b) (((a) < (b)) ? (a) : (b)) // min: Choose smaller of two scalars.
 #define max(a,b) (((a) > (b)) ? (a) : (b)) // max: Choose greater of two scalars.
 
+Vector2 Lerp(Vector2 Start, Vector2 End, float t);
 
 // Physics functions
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
