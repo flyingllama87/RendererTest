@@ -51,10 +51,10 @@ const int ViewHeight = 300;
 
 // PLAYER DEFS
 
-int CrouchingHeight = 4 * HalfWindowHeight; // Crouching Height
-int StandingHeight = 10 * HalfWindowHeight; // standing height.
+float CrouchingHeight = 2 * WindowHeight; // Crouching Height
+float StandingHeight = 5 * WindowHeight; // standing height.
 
-int PlayerHeight = StandingHeight; // Start standing.
+float PlayerHeight = StandingHeight; // Start standing.
 Player player = { 25, 25 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
 double Angle = 1.5700000f; // starting angle for player.
 
@@ -730,7 +730,7 @@ void RenderWall(WallLine wallLine)
 				else if (bFirstRun)
 				{
 
-					float CurrentXWallPoint = WallStartX + (StepXDelta * ((cl+1) - LeftMostWall));
+					float CurrentXWallPoint = WallStartX + (StepXDelta * ((cl + 1) - LeftMostWall));
 					float CurrentYWallPoint = WallStartY + (StepYDelta * ((cl + 1) - LeftMostWall));
 
 					VectorToLight = { LightPos.x - CurrentXWallPoint, LightPos.y - CurrentYWallPoint };
@@ -752,15 +752,43 @@ void RenderWall(WallLine wallLine)
 					LightScaler = WallToLightPerpendicularity - LightScaler;
 					LightScaler = Clamp(LightScaler, 0.33, 1.0); // Min value of light scaler is 0.33 / equiv to ambient light.
 
+
+					int Next64AlignedVLine = abs(cl % 64);
+					// Calculate light vals for the next block of pixels
+					CurrentXWallPoint = WallStartX + (StepXDelta * ((cl + Next64AlignedVLine) - LeftMostWall));
+					CurrentYWallPoint = WallStartY + (StepYDelta * ((cl + Next64AlignedVLine) - LeftMostWall));
+
+					VectorToLight = { LightPos.x - CurrentXWallPoint, LightPos.y - CurrentYWallPoint };
+					DistanceToLight = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
+
+					// Normalise the VectorToLight
+					VectorToLight = { VectorToLight.x / DistanceToLight , VectorToLight.y / DistanceToLight };
+
+					WallNormal = Cross( // What happens if one of these are 0?
+						Vector3(StepXDelta * ((cl + Next64AlignedVLine) - LeftMostWall), StepYDelta * ((cl + Next64AlignedVLine) - LeftMostWall), 0),
+						Vector3(0, 0, -1)
+					);
+
+					WallNormal.Normalise();
+
+					WallToLightPerpendicularity = Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLight);
+
+					NextLightScaler = (1.00 / MaxLightDistance) * abs(DistanceToLight);
+					NextLightScaler = WallToLightPerpendicularity - NextLightScaler;
+					NextLightScaler = Clamp(NextLightScaler, 0.33, 1.0); // Min value of light scaler is 0.33 / equiv to ambient light.
+
+					LightScalerStep = (NextLightScaler - LightScaler) / Next64AlignedVLine;
+
+
 					bFirstRun = false;
+
+
 
 				}
 				else
 				{
 					LightScaler += LightScalerStep;
 				}
-
-
 
 				YDeltaTop = (cl - LeftMostWall) * (HeightDeltaTop / WallWidth); // Calculate the change in Y position for the current vertical line.  Used for the ceiling vertical line.
 				YDeltaBottom = (cl - LeftMostWall) * (HeightDeltaBottom / WallWidth); // Calculate the change in Y position for the current vertical line.  Used for the floor vertical line.
