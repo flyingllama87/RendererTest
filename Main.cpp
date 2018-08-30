@@ -3,7 +3,6 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include "Utils.h"
-#include <cassert>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -74,6 +73,7 @@ Vector2 LightPos = { 1, 25 };
 float MaxLightDistance = 100;
 float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 bool bReverseDirection = false;
+int LightingUpdateThreshold = 0;
 int CurrentLerpInterval = 0;
 int TotalLerpInterval = 5000;
 
@@ -272,32 +272,42 @@ void HandleInput()
 void MoveLight()
 {
 	int TickDelta = TickCount - PreviousTickCount;
+	LightingUpdateThreshold += TickDelta;
 	CurrentLerpInterval += TickDelta;
-	float t = (float)CurrentLerpInterval / (float)TotalLerpInterval;
 
-	if (!bReverseDirection)
+	if (LightingUpdateThreshold > 100)
 	{
-		LightPos = Lerp(Vector2(1, 25), Vector2(99, 25), t);
-	}
-	else
-	{
-		LightPos = Lerp(Vector2(99, 25), Vector2(1, 25), t);
+		LightingUpdateThreshold = 0;
+
+		float t = (float)CurrentLerpInterval / (float)TotalLerpInterval;
+
+		if (!bReverseDirection)
+		{
+			LightPos = Lerp(Vector2(1, 25), Vector2(99, 25), t);
+		}
+		else
+		{
+			LightPos = Lerp(Vector2(99, 25), Vector2(1, 25), t);
+		}
+
+		if (CurrentLerpInterval > TotalLerpInterval)
+		{
+			bReverseDirection = !bReverseDirection;
+			CurrentLerpInterval = 0;
+		}
 	}
 
-	if (CurrentLerpInterval > TotalLerpInterval)
-	{
-		bReverseDirection = !bReverseDirection;
-		CurrentLerpInterval = 0;
-	}
+
+
 
 }
 
 
 void MainLoop() // Primary game loop.  Structured in this way (separate function) so code can be compiled with emscripten easily.
 {
-#ifndef __EMSCRIPTEN__
-	SDL_Delay(10);
-#endif // __EMSCRIPTEN__
+	// #ifndef __EMSCRIPTEN__
+	// 	SDL_Delay(10);
+	// #endif // __EMSCRIPTEN__
 
 	HandleInput();
 
@@ -353,7 +363,7 @@ void DrawDebugText()
 		"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n"
 		// " Debug1 val & Debug2 val: %.2f %.2f \n\n"
-		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light, left ctrl to crouch\nPress q to quit.",
+		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light (disabled for now), left ctrl to crouch\nPress q to quit.",
 		fps,
 		player.x, player.y, //Player position
 		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle)
