@@ -40,7 +40,7 @@ FEATURES TO IMPLEMENT:
 
 // **** GLOBAL DATA ****
 
-int TickCount = 0, PreviousTickCount, fps; // used for fps monitor
+int TickCount = 0, PreviousTickCount, fps, TickDelta; // used for fps monitor
 
 bool ContinueGame = true; // used as a conditional for exiting the app.
 
@@ -159,119 +159,119 @@ void DrawViews()
 
 void HandleInput()
 {
-	SDL_PollEvent(&event);
+	do
+	{
+		SDL_PumpEvents();
+	} while (SDL_PollEvent(&event) != 0);
 
+	Player CurrentPos = player; // Store current, valid player position in case new position is invalid / outside of sector.
 
-	Player CurrentPos = player;
 
 	// Keyboard input
-	switch (event.type) {
-	case SDL_KEYDOWN:
-		switch (event.key.keysym.sym) {
-		case SDLK_RIGHT:
-			Angle -= 0.1;
-			break;
-		case SDLK_LEFT:
-			Angle += 0.1;
-			break;
-		case SDLK_UP:
-			player.x += cos(Angle);
-			player.y -= sin(Angle);
-			if (IsPlayerCollidingWithWall())
-			{
-				player = CurrentPos;
-			}
-			break;
-		case SDLK_DOWN:
-			player.x -= cos(Angle);
-			player.y += sin(Angle);
-			if (IsPlayerCollidingWithWall())
-			{
-				player = CurrentPos;
-			}
-			break;
-		case SDLK_w:
-			player.x += cos(Angle);
-			player.y -= sin(Angle);
-			if (IsPlayerCollidingWithWall())
-			{
-				player = CurrentPos;
-			}
-			break;
-		case SDLK_s:
-			player.x -= cos(Angle);
-			player.y += sin(Angle);
-			if (IsPlayerCollidingWithWall())
-			{
-				player = CurrentPos;
-			}
-			break;
-		case SDLK_a:
-			player.x -= sin(Angle);
-			player.y -= cos(Angle);
-			if (IsPlayerCollidingWithWall())
-			{
-				player = CurrentPos;
-			}
-			break;
-		case SDLK_d:
-			player.x += sin(Angle);
-			player.y += cos(Angle);
-			if (IsPlayerCollidingWithWall())
-			{
-				player = CurrentPos;
-			}
-			break;
-		case SDLK_r:
-			player.x = 25;
-			player.y = 25;
-			Angle = 0.00001f;
-			LightPos.x = 5; LightPos.y = 25;
-			break;
-		case SDLK_t:
-			Angle += 45.0 / (180 / M_PI);
-			break;
-		case SDLK_e:
-			Angle += 1.0 / (180 / M_PI);
-			break;
-		case SDLK_y:
-			Angle += 0.000001 / (180 / M_PI);
-			break;
-		case SDLK_k:
-			if (LightPos.x > 0 && LightPos.x <= 100)
-				LightPos.x += 1;
-			else if (LightPos.x > 100)
-				LightPos.x = 1;
-			break;
-		case SDLK_l:
-			if (LightPos.y > 0 && LightPos.y <= 50)
-				LightPos.y += 1;
-			else if (LightPos.y > 50)
-				LightPos.y = 1;
-			break;
-		case SDLK_LCTRL:
-			PlayerHeight = CrouchingHeight;
-			break;
-		case SDLK_q:
-			ContinueGame = false;
-			SDL_Quit();
-			break;
-		}
-		break;
-	case SDL_KEYUP:
-		switch (event.key.keysym.sym) {
-		case SDLK_LCTRL:
-			PlayerHeight = StandingHeight;
-			break;
-		}
-		break;
+	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
 
+	if (keystate[SDL_SCANCODE_RIGHT])
+		Angle -= 0.1;
+
+	if (keystate[SDL_SCANCODE_LEFT])
+		Angle += 0.1;
+
+	if (keystate[SDL_SCANCODE_UP])
+	{
+		player.x += cos(Angle);
+		player.y -= sin(Angle);
+		if (IsPlayerCollidingWithWall())
+		{
+			player = CurrentPos;
+		}
 	}
+	if (keystate[SDL_SCANCODE_DOWN])
+	{
+		player.x -= cos(Angle);
+		player.y += sin(Angle);
+		if (IsPlayerCollidingWithWall())
+		{
+			player = CurrentPos;
+		}
+	}
+	if (keystate[SDL_SCANCODE_W])
+	{
+		player.x += cos(Angle);
+		player.y -= sin(Angle);
+		if (IsPlayerCollidingWithWall())
+		{
+			player = CurrentPos;
+		}
+	}
+	if (keystate[SDL_SCANCODE_S])
+	{
+		player.x -= cos(Angle);
+		player.y += sin(Angle);
+		if (IsPlayerCollidingWithWall())
+		{
+			player = CurrentPos;
+		}
+	}
+	if (keystate[SDL_SCANCODE_A])
+	{
+		player.x -= sin(Angle);
+		player.y -= cos(Angle);
+		if (IsPlayerCollidingWithWall())
+		{
+			player = CurrentPos;
+		}
+	}
+	if (keystate[SDL_SCANCODE_D])
+	{
+		player.x += sin(Angle);
+		player.y += cos(Angle);
+		if (IsPlayerCollidingWithWall())
+		{
+			player = CurrentPos;
+		}
+	}
+	if (keystate[SDL_SCANCODE_R])
+	{
+		player.x = 25;
+		player.y = 25;
+		Angle = 0.00001f;
+		LightPos.x = 5; LightPos.y = 25;
+	}
+	if (keystate[SDL_SCANCODE_T])
+		Angle += 45.0 / (180 / M_PI);
+	if (keystate[SDL_SCANCODE_E])
+		Angle += 1.0 / (180 / M_PI);
+	if (keystate[SDL_SCANCODE_Y])
+		Angle += 0.000001 / (180 / M_PI);
+	if (keystate[SDL_SCANCODE_K])
+	{
+		if (LightPos.x > 0 && LightPos.x <= 100)
+			LightPos.x += 1;
+		else if (LightPos.x > 100)
+			LightPos.x = 1;
+	}
+	if (keystate[SDL_SCANCODE_L])
+	{
+		if (LightPos.y > 0 && LightPos.y <= 50)
+			LightPos.y += 1;
+		else if (LightPos.y > 50)
+			LightPos.y = 1;
+	}
+	if (keystate[SDL_SCANCODE_LCTRL])
+		PlayerHeight = CrouchingHeight;
+	if (!keystate[SDL_SCANCODE_LCTRL])
+		PlayerHeight = StandingHeight;
+	if (keystate[SDL_SCANCODE_Q])
+	{
+		ContinueGame = false;
+		SDL_Quit();
+	}
+
+
 }
 
 void MoveLight()
 {
-	int TickDelta = TickCount - PreviousTickCount;
 	LightingUpdateThreshold += TickDelta;
 	CurrentLerpInterval += TickDelta;
 
@@ -303,25 +303,37 @@ void MoveLight()
 }
 
 
-void MainLoop() // Primary game loop.  Structured in this way (separate function) so code can be compiled with emscripten easily.
+void CountFPSAndLimit()
 {
-	// #ifndef __EMSCRIPTEN__
-	// 	SDL_Delay(10);
-	// #endif // __EMSCRIPTEN__
-
-	HandleInput();
-
-	// Set color to white & clear
-	SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-	SDL_RenderClear(m_renderer);
-
 	// Calculate FPS
 
 	PreviousTickCount = TickCount;
 	TickCount = SDL_GetTicks();
-	int TickDelta = TickCount - PreviousTickCount;
+	TickDelta = TickCount - PreviousTickCount;
 
-	fps = 1000 / TickDelta;
+	int DelayTicks = 0;
+
+	if (TickDelta <= 16) // Limit FPS to about 60fps.
+	{
+		DelayTicks = 16 - TickDelta;
+		SDL_Delay(DelayTicks);
+	}
+
+	fps = 1000 / (TickDelta + DelayTicks); 
+
+
+}
+
+void MainLoop() // Primary game loop.  Structured in this way (separate function) so code can be compiled with emscripten easily.
+{
+
+	CountFPSAndLimit(); 
+
+	HandleInput();
+
+	// Set color to white & clear
+	// SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+	// SDL_RenderClear(m_renderer);
 
 	MoveLight();
 
