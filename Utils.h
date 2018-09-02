@@ -14,8 +14,9 @@ extern SDL_Color colorRed; // used for text
 
 // SDL specific vars:
 extern TTF_Font *font;
-extern SDL_Window *m_window;
-extern SDL_Renderer *m_renderer;
+extern SDL_Window *g_window;
+extern SDL_Renderer *g_renderer;
+extern SDL_Surface *g_surface;
 
 extern SDL_Event event; // Used for tracking SDL events.
 
@@ -108,7 +109,9 @@ void RenderDebug(WallLine wallLine);
 
 // Offset functions make it easy to have multiple viewports
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset);
+void DrawLineWithScaleAndOffset(float scale, float x1, float y1, float x2, float y2, SDL_Point offset);
 void DrawPixelWithOffset(float x, float y, SDL_Point offset);
+void DrawPixelWithScaleAndOffset(float scale, float x, float y, SDL_Point offset);
 
 // Generic math functions
 float Dot(Vector2 first, Vector2 second); // Calculate vector2 dot product.

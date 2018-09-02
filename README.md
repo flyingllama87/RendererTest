@@ -64,3 +64,4 @@ em++ -std=c++11 -s USE_SDL=2 -s USE_SDL_TTF=2 --preload-file font.ttf -o render_
 
 - Font taken from KISS SDL project: https://github.com/actsl/kiss_sdl - Thanks a million.
 - Bisqwit: The crazy, smart, funny person that inspired this journey.
+- Brick texture taken from opengameart.org, author "fraang", CC-BY-SA 3.0 license: https://opengameart.org/content/bricks

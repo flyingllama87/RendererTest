@@ -12,8 +12,9 @@ SDL_Color colorRed = { 255, 0, 0, 255 }; // used for text
 
 // SDL vars:
 TTF_Font *font;
-SDL_Window *m_window;
-SDL_Renderer *m_renderer;
+SDL_Window *g_window;
+SDL_Renderer *g_renderer;
+SDL_Surface *g_surface;
 SDL_Event event; // Used for event SDL events.
 
 
@@ -24,12 +25,22 @@ SDL_Event event; // Used for event SDL events.
 // Offset functions make it easy to have multiple viewports
 void DrawLineWithOffset(int x1, int y1, int x2, int y2, SDL_Point offset)
 {
-	SDL_RenderDrawLine(m_renderer, x1 + offset.x, y1 + offset.y, x2 + offset.x, y2 + offset.y);
+	SDL_RenderDrawLine(g_renderer, x1 + offset.x, y1 + offset.y, x2 + offset.x, y2 + offset.y);
+}
+
+void DrawLineWithScaleAndOffset(float scale, float x1, float y1, float x2, float y2, SDL_Point offset)
+{
+	SDL_RenderDrawLine(g_renderer, (int)(scale * x1) + offset.x, (int)(scale * y1) + offset.y, (int)(scale * x2) + offset.x, (int)(scale * y2) + offset.y);
 }
 
 void DrawPixelWithOffset(float x, float y, SDL_Point offset)
 {
-	SDL_RenderDrawPoint(m_renderer, x + offset.x, y + offset.y);
+	SDL_RenderDrawPoint(g_renderer, x + offset.x, y + offset.y);
+}
+
+void DrawPixelWithScaleAndOffset(float scale, float x, float y, SDL_Point offset)
+{
+	SDL_RenderDrawPoint(g_renderer, (int)(scale * x) + offset.x, (int)(scale * y) + offset.y);
 }
 
 // *** GENERIC MATH FUNCTIONS ***
