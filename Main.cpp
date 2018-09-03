@@ -645,11 +645,11 @@ void RenderWall(WallLine wallLine)
 
 		// Clip lines again but this time to the width of the FOV
 
-		// IntersectPoint1 = lineSegmentIntersection(2.0f, 1.0f, 12.0f, 11.0f, 1.0f, 1.0f, 20.0f, 5.0f);
-		// IntersectPoint2 = IntersectLineSegs(2.0f, 1.0f, 12.0f, 11.0f, 1.0f, 1.0f, 20.0f, 5.0f);
+		IntersectPoint1 = lineSegmentIntersection(2.0f, 1.0f, 12.0f, 11.0f, 1.0f, 1.0f, 20.0f, 5.0f);
+		IntersectPoint2 = IntersectLineSegs(2.0f, 1.0f, 12.0f, 11.0f, 1.0f, 1.0f, 20.0f, 5.0f);
 		
-		IntersectPoint1 = lineSegmentIntersection(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -25, 50);
-		IntersectPoint2 = IntersectLineSegs(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -25, 50);
+		// IntersectPoint1 = lineSegmentIntersection(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -25, 50);
+		// IntersectPoint2 = IntersectLineSegs(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -25, 50);
 
 		// IntersectPoint1 = IntersectLineSegs(0.5f, 0.01f, 0.6f, 8.0f, 0.1f, 0.1f, 25.0f, 50.0f);
 
