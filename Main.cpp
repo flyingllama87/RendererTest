@@ -51,20 +51,21 @@ bool ContinueGame = true; // used as a conditional for exiting the app.
 
 const int ViewWidth = 256;
 const int ViewHeight = 256;
-
+const int HalfViewWidth = ViewWidth / 2;
+const int HalfViewHeight = ViewHeight / 2;
 
 // PLAYER DEFS
 
-float CrouchingHeight = 0.3 * HalfWindowHeight; // Crouching Height
-float StandingHeight = 0.5 * HalfWindowHeight; // standing height.
+float CrouchingHeight = 6 * HalfWindowHeight; // Crouching Height
+float StandingHeight = 10 * HalfWindowHeight; // standing height.
 
 float PlayerHeight = StandingHeight; // Start standing.
-Player player = { 5.0, 5.0 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
-float Angle = 0.0f; // starting angle for player.
+Player player = { 25.0, 25.0 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
+float Angle = M_PI; // starting angle for player.
 
 
 
-// WALL DEFS & RESOURCES
+					// WALL DEFS & RESOURCES
 
 SDL_Color CeilingColor = { 64,64,64,255 };
 SDL_Color FloorColor = { 64,64,64,255 };
@@ -75,9 +76,9 @@ SDL_Surface* WallTextureSurface;
 
 // LIGHTING DEFS
 
-float LightSize = 2.0;
-Vector2 LightPos = { 0.1f, 9.9f };
-float MaxLightDistance = 10.0;
+float LightSize = 50.0;
+Vector2 LightPos = { 1, 25 };
+float MaxLightDistance = 100;
 float LightFalloff = 1; // Light intensity diminishes by a value of 1 per pixel.
 bool bReverseDirection = false;
 int LightingUpdateThreshold = 0;
@@ -89,7 +90,7 @@ int TotalLerpInterval = 5000;
 
 SDL_Point Offset; // used for setting an 'offset' for each view.
 
-// VIEW DEFS x, y, w, h
+				  // VIEW DEFS x, y, w, h
 SDL_Rect AbsoluteView = { 16, 16, ViewWidth, ViewHeight };
 SDL_Rect TransformedView = { WindowWidth - ViewWidth - 16, 16, ViewWidth, ViewHeight };
 SDL_Rect PerspectiveView = { 0, 0, WindowWidth, WindowHeight };
@@ -112,9 +113,9 @@ bool LoadResources() // Map, Textures, sounds etc.
 	SDL_Surface* BMPSurface = SDL_LoadBMP("brick64x64_24b.bmp");
 	assert(BMPSurface != NULL); // Assert if BMP load failed.
 
-	// Used for debugging surface pixel format.
-	// Uint8* BMPPixelData = (Uint8*)BMPSurface->pixels; // get raw pixel data in weird format.
-	// const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format); 
+								// Used for debugging surface pixel format.
+								// Uint8* BMPPixelData = (Uint8*)BMPSurface->pixels; // get raw pixel data in weird format.
+								// const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format); 
 
 	WallTextureSurface = SDL_ConvertSurfaceFormat(BMPSurface, SDL_PIXELFORMAT_RGB24, 0);
 
@@ -128,11 +129,11 @@ bool LoadResources() // Map, Textures, sounds etc.
 
 	// Wall points must be defined in a clockwise 'winding order'
 	AllWalls = {
-	{ 0.0, 0.0, 10.0, 0.0,{ 255, 0, 255, 255 } },		// Wall 1
-	{ 10.0, 0.0, 15.0, 5.0,{ 255, 0, 255, 255 } },		// Wall 2
-	{ 15.0, 5.0, 10.0, 10.0,{ 0, 255, 255, 255 } },		// Wall 3
-	{ 10.0, 10.0, 0.0, 10.0,{ 255, 0, 255, 255 } },		// Wall 4
-	{ 0.0, 10.0, 0.0, 0.0,{ 255, 0, 255, 255 } }		// Wall 5
+		{ 0.0, 0.0, 50.0, 0.0,{ 255, 0, 255, 255 } },		// Wall 1
+	{ 50.0, 0.0, 100.0, 25.0,{ 255, 0, 255, 255 } },	// Wall 2
+	{ 100.0, 25.0, 50.0, 50.0,{ 0, 255, 255, 255 } },	// Wall 3
+	{ 50.0, 50.0, 0.0, 50.0,{ 255, 0, 255, 255 } },		// Wall 4
+	{ 0.0, 50.0, 0.0, 0.0,{ 255, 0, 255, 255 } }		// Wall 5
 	};
 
 	return true;
@@ -145,7 +146,7 @@ SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel c
 
 	SDL_LockSurface(Surface); // Lock surface so we can access raw pixel data.
 
-	Uint8* PixelData = (Uint8*)Surface->pixels; 
+	Uint8* PixelData = (Uint8*)Surface->pixels;
 
 	int PixelRow = Surface->pitch * y;
 	int PixelColumn = Surface->format->BytesPerPixel * x;
@@ -165,48 +166,6 @@ SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel c
 
 }
 
-void DrawViews()
-{
-
-	// *** DRAW VIEWS **
-
-
-	// ** DRAW AbsoluteView VIEWPORT **
-
-	// Set color to black & draw viewport background
-	SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
-	SDL_RenderFillRect(g_renderer, &AbsoluteView);
-
-	// Set color to red and draw border.
-	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
-	SDL_RenderDrawRect(g_renderer, &AbsoluteView);
-
-
-	// ** DRAW TRANSFORMED VIEWPORT **
-
-	// Set color to black & draw viewport background
-	SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
-	SDL_RenderFillRect(g_renderer, &TransformedView);
-
-	// Set color to red and draw border.
-	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
-	SDL_RenderDrawRect(g_renderer, &TransformedView);
-
-	Offset.x = TransformedView.x;
-	Offset.y = TransformedView.y;
-
-	// Draw player line
-	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
-	DrawLineWithOffset(ViewWidth / 2, ViewHeight / 2, ViewWidth / 2, ViewWidth / 2 - 5, Offset);
-
-	// Change render colour to a light gray for intersect lines
-	SDL_SetRenderDrawColor(g_renderer, 128, 128, 128, 128);
-
-	// Draw intersect line
-	DrawLineWithOffset(ViewWidth / 2 + -0.0001, ViewHeight / 2 - 0.0001, ViewWidth / 2 + -60, ViewHeight / 2 - 2, Offset);
-	DrawLineWithOffset(ViewWidth / 2 + 0.0001, ViewHeight / 2 - 0.0001, ViewWidth / 2 + 60, ViewHeight / 2 - 2, Offset);
-
-}
 
 
 void HandleInput()
@@ -218,7 +177,7 @@ void HandleInput()
 	Player CurrentPos = player; // Store current, valid player position in case new position is invalid / outside of sector.
 
 
-	// Keyboard input
+								// Keyboard input
 	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
 
 	if (keystate[SDL_SCANCODE_RIGHT])
@@ -229,8 +188,8 @@ void HandleInput()
 
 	if (keystate[SDL_SCANCODE_UP])
 	{
-		player.x += cos(Angle) * 0.1;
-		player.y -= sin(Angle) * 0.1;
+		player.x += cos(Angle);
+		player.y -= sin(Angle);
 		if (IsPlayerCollidingWithWall())
 		{
 			player = CurrentPos;
@@ -238,8 +197,8 @@ void HandleInput()
 	}
 	if (keystate[SDL_SCANCODE_DOWN])
 	{
-		player.x -= cos(Angle) * 0.1;
-		player.y += sin(Angle) * 0.1;
+		player.x -= cos(Angle);
+		player.y += sin(Angle);
 		if (IsPlayerCollidingWithWall())
 		{
 			player = CurrentPos;
@@ -247,8 +206,8 @@ void HandleInput()
 	}
 	if (keystate[SDL_SCANCODE_W])
 	{
-		player.x += cos(Angle) * 0.1;
-		player.y -= sin(Angle) * 0.1;
+		player.x += cos(Angle);
+		player.y -= sin(Angle);
 		if (IsPlayerCollidingWithWall())
 		{
 			player = CurrentPos;
@@ -256,8 +215,8 @@ void HandleInput()
 	}
 	if (keystate[SDL_SCANCODE_S])
 	{
-		player.x -= cos(Angle) * 0.1;
-		player.y += sin(Angle) * 0.1;
+		player.x -= cos(Angle);
+		player.y += sin(Angle);
 		if (IsPlayerCollidingWithWall())
 		{
 			player = CurrentPos;
@@ -265,8 +224,8 @@ void HandleInput()
 	}
 	if (keystate[SDL_SCANCODE_A])
 	{
-		player.x -= sin(Angle) * 0.1;
-		player.y -= cos(Angle) * 0.1;
+		player.x -= sin(Angle);
+		player.y -= cos(Angle);
 		if (IsPlayerCollidingWithWall())
 		{
 			player = CurrentPos;
@@ -283,10 +242,10 @@ void HandleInput()
 	}
 	if (keystate[SDL_SCANCODE_R])
 	{
-		player.x = 5.0f;
-		player.y = 5.0f;
-		Angle = 0.00000f;
-		LightPos.x = 2.5f; LightPos.y = 2.5f;
+		player.x = 25;
+		player.y = 25;
+		Angle = 0.00001f;
+		LightPos.x = 5; LightPos.y = 25;
 	}
 	if (keystate[SDL_SCANCODE_T])
 		Angle += 45.0 / (180 / M_PI);
@@ -333,11 +292,11 @@ void MoveLight()
 
 		if (!bReverseDirection)
 		{
-			LightPos = Lerp(Vector2(0.1, 4.9), Vector2(14.9, 4.9), t);
+			LightPos = Lerp(Vector2(1, 25), Vector2(99, 25), t);
 		}
 		else
 		{
-			LightPos = Lerp(Vector2(14.9, 4.9), Vector2(0.1, 4.9), t);
+			LightPos = Lerp(Vector2(99, 25), Vector2(1, 25), t);
 		}
 
 		if (CurrentLerpInterval > TotalLerpInterval)
@@ -369,56 +328,62 @@ void CountFPSAndLimit()
 		SDL_Delay(DelayTicks);
 	}
 
-	fps = 1000 / (TickDelta + DelayTicks); 
+	fps = 1000 / (TickDelta + DelayTicks);
 
 
 }
 
 
-void MainLoop() // Primary game loop.  Structured in this way (separate function) so code can be compiled with emscripten easily.
+
+
+void DrawViews()
 {
 
-	CountFPSAndLimit(); 
+	// *** DRAW VIEWS **
 
-	HandleInput();
 
-	
+	// ** DRAW AbsoluteView VIEWPORT **
 
-	// Set color to white & clear
-	SDL_SetRenderDrawColor(g_renderer, 64, 64, 64, 255);
-	SDL_RenderClear(g_renderer);
+	// Set color to black & draw viewport background
+	SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
+	SDL_RenderFillRect(g_renderer, &AbsoluteView);
 
-	// MoveLight();
+	// Set color to red and draw border.
+	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
+	SDL_RenderDrawRect(g_renderer, &AbsoluteView);
 
-	// RenderWalls
 
-	for (auto& wall : AllWalls)
-	{
-		if (&AllWalls.back() == &wall)
-		{
-			DrawingLastWall = true; // Used to determine when the last wall is being drawn so debug info can be drawn.  Switch to false after draw.
-		}
+	// ** DRAW TRANSFORMED VIEWPORT **
 
-		RenderWall(wall);
-	}
+	// Set color to black & draw viewport background
+	SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
+	SDL_RenderFillRect(g_renderer, &TransformedView);
 
-	// Render debug viewports
+	// Set color to red and draw border.
+	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
+	SDL_RenderDrawRect(g_renderer, &TransformedView);
 
-	DrawViews();
+	Offset.x = TransformedView.x;
+	Offset.y = TransformedView.y;
 
-	for (auto& wall : AllWalls)
-	{
-		if (&AllWalls.back() == &wall)
-		{
-			DrawingLastWall = true; // Used to determine when the last wall is being drawn so debug info can be drawn.  Switch to false after draw.
-		}
-		RenderDebug(wall);
-	}
+	// Draw player line
+	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
+	DrawLineWithOffset(HalfViewWidth, HalfViewHeight, HalfViewWidth, HalfViewWidth - 5, Offset);
 
-	
+	// Change render colour to a light gray for intersect lines
+	SDL_SetRenderDrawColor(g_renderer, 128, 128, 128, 128);
 
-	// perform render
-	SDL_RenderPresent(g_renderer);
+	// Draw intersect line
+	DrawLineWithOffset(HalfViewWidth + -0.0001, HalfViewHeight - 0.0001, HalfViewWidth + -60, HalfViewHeight - 2, Offset);
+	DrawLineWithOffset(HalfViewWidth + 0.0001, HalfViewHeight - 0.0001, HalfViewWidth + 60, HalfViewHeight - 2, Offset);
+
+	// Change render colour to a light blue for viewplane trim
+	SDL_SetRenderDrawColor(g_renderer, 128, 128, 256, 128);
+
+	// Draw intersect line
+	DrawLineWithOffset(HalfViewWidth + -0.0001, HalfViewHeight - 0.0001, HalfViewWidth + -25, HalfViewHeight - 50, Offset);
+	DrawLineWithOffset(HalfViewWidth + 0.0001, HalfViewHeight - 0.0001, HalfViewWidth + 25, HalfViewHeight - 50, Offset);
+
 }
 
 
@@ -521,11 +486,6 @@ void RenderDebug(WallLine wallLine)
 
 	float WallToLightPerpendicularity = Dot(Vector2(WallNormal.x, WallNormal.y), VectorToLightNormalised);
 
-	float LightScaler = (1.00 / MaxLightDistance) * abs(LightDistance);
-	LightScaler = WallToLightPerpendicularity - LightScaler;
-	LightScaler = Clamp(LightScaler, 0.33, 1.0); // Min value of light scaler is 0.33 / equiv to ambient light.
-
-
 	if (DrawingLastWall == true)
 	{
 		DrawDebugText(); // Debug text only applies to one wall
@@ -542,43 +502,41 @@ void RenderDebug(WallLine wallLine)
 	SDL_SetRenderDrawColor(g_renderer, 0, 255, 0, 255);
 
 	// Draw Wall / Line in 'Absolute View'
-	DrawLineWithScaleAndOffset(5.0f, AbsoluteLineP1.x, AbsoluteLineP1.y, AbsoluteLineP2.x, AbsoluteLineP2.y, Offset);
+	DrawLineWithOffset(AbsoluteLineP1.x, AbsoluteLineP1.y, AbsoluteLineP2.x, AbsoluteLineP2.y, Offset);
 
 	// Draw player line with red
 	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
-	DrawLineWithScaleAndOffset(5.0f, player.x, player.y, player.x + cos(Angle) * 2.0f, player.y - sin(Angle) * 2.0f, Offset);
+	DrawLineWithOffset(player.x, player.y, player.x + cos(Angle) * 5, player.y - sin(Angle) * 5, Offset);
 
 	// Change render colour to white for drawing light position
 	SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 255);
-	DrawPixelWithScaleAndOffset(5.0f, LightPos.x, LightPos.y, Offset);
+	DrawPixelWithOffset(LightPos.x, LightPos.y, Offset);
 
 
 	// Draw line from wall to light
 	SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 255);
-	DrawLineWithScaleAndOffset(5.0f,
-		MiddleOfWall.x,
-		MiddleOfWall.y,
-		MiddleOfWall.x + (VectorToLightNormalised.x * 2.0f),
-		MiddleOfWall.y + (VectorToLightNormalised.y * 2.0f),
-		Offset
+	SDL_RenderDrawLine(g_renderer,
+		Offset.x + MiddleOfWall.x,
+		Offset.y + MiddleOfWall.y,
+		Offset.x + MiddleOfWall.x + (VectorToLightNormalised.x * 5),
+		Offset.y + MiddleOfWall.y + (VectorToLightNormalised.y * 5)
 	);
 
 
 	// Draw wall normal
 	SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
-	DrawLineWithScaleAndOffset(5.0f,
-		MiddleOfWall.x,
-		MiddleOfWall.y,
-		MiddleOfWall.x + (WallNormal.x * 2.0f),
-		MiddleOfWall.y + (WallNormal.y * 2.0f),
-		Offset
+	SDL_RenderDrawLine(g_renderer,
+		Offset.x + MiddleOfWall.x,
+		Offset.y + MiddleOfWall.y,
+		Offset.x + MiddleOfWall.x + (WallNormal.x * 5),
+		Offset.y + MiddleOfWall.y + (WallNormal.y * 5)
 	);
 
 
 	// TRANSFORMED VIEW
 
-	Offset.x = TransformedView.x + (ViewWidth / 2);
-	Offset.y = TransformedView.y + (ViewHeight / 2);
+	Offset.x = TransformedView.x;
+	Offset.y = TransformedView.y;
 
 	// Change render colour
 	SDL_SetRenderDrawColor(g_renderer, 0, 255, 0, 255);
@@ -586,12 +544,12 @@ void RenderDebug(WallLine wallLine)
 
 
 	// Draw wall / line.
-	DrawLineWithScaleAndOffset(5.0f, -TransformedLineP1.x, -TransformedLineP1.z, -TransformedLineP2.x, -TransformedLineP2.z, Offset);
+	DrawLineWithOffset((HalfViewWidth - TransformedLineP1.x), (HalfViewHeight - TransformedLineP1.z), (HalfViewWidth - TransformedLineP2.x), (HalfViewHeight - TransformedLineP2.z), Offset);
 
-	// Draw lighting pixel
-	DrawPixelWithScaleAndOffset(5.0f,
-		-TransformedLightPos.x,
-		-TransformedLightPos.y,
+
+	DrawPixelWithOffset(
+		(float)HalfViewWidth - TransformedLightPos.x,
+		(float)HalfViewHeight - TransformedLightPos.y,
 		Offset);
 
 
@@ -685,19 +643,24 @@ void RenderWall(WallLine wallLine)
 		}
 
 
+		// Clip lines again but this time to the width of the FOV
+
+		// IntersectPoint1 = lineSegmentIntersection(2.0f, 1.0f, 12.0f, 11.0f, 1.0f, 1.0f, 20.0f, 5.0f);
+		// IntersectPoint2 = IntersectLineSegs(2.0f, 1.0f, 12.0f, 11.0f, 1.0f, 1.0f, 20.0f, 5.0f);
+		
+		IntersectPoint1 = lineSegmentIntersection(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -25, 50);
+		IntersectPoint2 = IntersectLineSegs(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -25, 50);
+
+		// IntersectPoint1 = IntersectLineSegs(0.5f, 0.01f, 0.6f, 8.0f, 0.1f, 0.1f, 25.0f, 50.0f);
+
+		// IntersectPoint2 = lineSegmentIntersection(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -25, 50);
+
 		// *** PERSPECTIVE DIVIDE *** What are FOV values? HFOV = 53.13 degrees according to calcs. VFOV = ?
 
 		// x and y scalars are set depending on window height and width
 
 		float xscale = PerspectiveView.w;
-		float yscale = PerspectiveView.h;
-
-		float xscale1 = hfov / TransformedLineP1.z;
-		float xscale2 = hfov / TransformedLineP2.z;
-		//float yscale = PerspectiveView.h;
-
-		//float xscale1 = hfov / tz1, yscale1 = vfov / tz1;    int x1 = W / 2 - (int)(tx1 * xscale1);
-		//float xscale2 = hfov / tz2, yscale2 = vfov / tz2;    int x2 = W / 2 - (int)(tx2 * xscale2);
+		float yscale = PerspectiveView.h * 8;
 
 		if (PlayerHeight == CrouchingHeight)
 		{
@@ -727,43 +690,44 @@ void RenderWall(WallLine wallLine)
 
 		float AmountOfWallLeftClipped = 0.0, AmountOfWallRightClipped = 0.0; // Used to lighting calcs.  Lighting calcs are performed on the entire wall but often only a portion of the wall is shown so we need to know how much of wall was clipped.
 
+
 		
 		// Clip walls with left & right side of view pane
-		
-		if (Wall.x1 <= -HalfWindowWidth  + 1) // clip wall pt1 left
+
+		if (Wall.x1 <= -HalfWindowWidth + 1) // clip wall pt1 left
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -HalfWindowWidth  + 1, -HalfWindowHeight, -HalfWindowWidth  + 1, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -HalfWindowWidth  + 1, -HalfWindowHeight, -HalfWindowWidth  + 1, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
 			AmountOfWallLeftClipped = Wall.x1 - PerspectiveViewClipPosTop.x;
 			Wall.x1 = PerspectiveViewClipPosTop.x;
 			Wall.y1a = PerspectiveViewClipPosTop.y;
 			Wall.y1b = PerspectiveViewClipPosBottom.y;
 		}
 
-		if (Wall.x2 <= -HalfWindowWidth  + 1) // clip wall pt2 left
+		if (Wall.x2 <= -HalfWindowWidth + 1) // clip wall pt2 left
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -HalfWindowWidth  + 1, -HalfWindowHeight, -HalfWindowWidth  + 1, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -HalfWindowWidth  + 1, -HalfWindowHeight, -HalfWindowWidth  + 1, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
 			AmountOfWallLeftClipped = Wall.x2 - PerspectiveViewClipPosTop.x;
 			Wall.x2 = PerspectiveViewClipPosTop.x;
 			Wall.y2a = PerspectiveViewClipPosTop.y;
 			Wall.y2b = PerspectiveViewClipPosBottom.y;
 		}
 
-		if (Wall.x1 >= HalfWindowWidth  - 1) // clip wall pt1 right
+		if (Wall.x1 >= HalfWindowWidth - 1) // clip wall pt1 right
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, HalfWindowWidth  - 2, -HalfWindowHeight, HalfWindowWidth  - 2, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, HalfWindowWidth  - 2, -HalfWindowHeight, HalfWindowWidth  - 2, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
 			AmountOfWallRightClipped = Wall.x1 - PerspectiveViewClipPosTop.x;
 			Wall.x1 = PerspectiveViewClipPosTop.x;
 			Wall.y1a = PerspectiveViewClipPosTop.y;
 			Wall.y1b = PerspectiveViewClipPosBottom.y;
 		}
 
-		if (Wall.x2 >= HalfWindowWidth  - 1) // clip wall pt2 right
+		if (Wall.x2 >= HalfWindowWidth - 1) // clip wall pt2 right
 		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, HalfWindowWidth  - 2, -HalfWindowHeight, HalfWindowWidth  - 2, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, HalfWindowWidth  - 2, -HalfWindowHeight, HalfWindowWidth  - 2, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
+			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
 			AmountOfWallRightClipped = Wall.x2 - PerspectiveViewClipPosTop.x;
 			Wall.x2 = PerspectiveViewClipPosTop.x;
 			Wall.y2a = PerspectiveViewClipPosTop.y;
@@ -805,7 +769,7 @@ void RenderWall(WallLine wallLine)
 		Vector2 VectorToLight;
 		float DistanceToLight;
 		float LightScaler = 0.33;
-		
+
 
 		if (WallWidth > 1)
 		{
@@ -939,41 +903,36 @@ void RenderWall(WallLine wallLine)
 				// get color to render to wall from wall texture.
 
 				//int WallLineLength = 64 * sqrt((TransformedLineP2.x - TransformedLineP1.x) * (TransformedLineP2.x - TransformedLineP1.x) + (TransformedLineP2.y - TransformedLineP1.y) * (TransformedLineP2.y - TransformedLineP1.y)); // Get the full length of the wall.  This value is not dependant on the perspective divide / player POV.  We can use this to work out the exact position of the texture mapped wall co-ords.
-				int WallLineLength = 64 * sqrt((AbsoluteLineP2.x - AbsoluteLineP1.x) * (AbsoluteLineP2.x - AbsoluteLineP1.x) + (AbsoluteLineP2.y - AbsoluteLineP1.y) * (AbsoluteLineP2.y - AbsoluteLineP1.y));
+				int WallLineLength = 16 * sqrt((AbsoluteLineP2.x - AbsoluteLineP1.x) * (AbsoluteLineP2.x - AbsoluteLineP1.x) + (AbsoluteLineP2.y - AbsoluteLineP1.y) * (AbsoluteLineP2.y - AbsoluteLineP1.y));
 				int WallTextureSize = WallTextureSurface->w;
 				// float WallLineTextureLength = WallLineLength - (WallLineLength % WallTextureSize); // Align to 64 pixels just to see how it looks
 				float WallLineTextureLength = WallLineLength;
 
-				float WallLineTextureLengthStart = WallLineTextureLength * WallClipStart;
-				float WallLineTextureLengthEnd = WallLineTextureLength * WallClipEnd;
-				float WallLineTextureLengthVisible = WallLineTextureLength * (WallClipEnd - WallClipStart);
-
 				float CurrentXValOfWall = cl - (int)LeftMostWall;
 
-				int ScaledXValOfWallTextureStart = (int)(WallLineTextureLength * WallClipStart) % WallTextureSize;
-				int ScaledXValOfWallTextureEnd = (int)(WallLineTextureLength * (1.0f - WallClipEnd)) % WallTextureSize;
-				int ScaledXValOfWallTextureVisible = ScaledXValOfWallTextureEnd - ScaledXValOfWallTextureStart;
+				int ScaledXValOfWallTextureStart = (int)(WallLineTextureLength * WallClipStart);
+				int ScaledXValOfWallTextureStartMod = (int)(WallLineTextureLength * WallClipStart) % WallTextureSize;
+				int ScaledXValOfWallTextureEnd = (int)(WallLineTextureLength * WallClipEnd);
+				float ScaledXValOfWallTextureVisible = ScaledXValOfWallTextureEnd - ScaledXValOfWallTextureStart;
 
 				if (DrawingLastWall)
 				{
 					DrawingLastWall = false;
 
-					debug1 = WallWidth;
-					debug2 = WallWidthPreClip;
-					debug3 = WallWidth / WallWidthPreClip;
+					debug1 = ScaledXValOfWallTextureVisible;
+					debug2 = WallWidth;
+					debug3 = CurrentXValOfWall * (ScaledXValOfWallTextureVisible / WallWidth);
 
 				}
 
-				int CurrentScaledXValOfWall = CurrentXValOfWall * (WallLineTextureLength / WallWidthPreClip);
-				
-
+				float CurrentScaledXValOfWall = CurrentXValOfWall * (ScaledXValOfWallTextureVisible / WallWidth);
 
 				int TotalWallVlineHeight = WallDrawBottom - WallDrawTop;
-				
-				float CurrentXValOfWallTexture = (CurrentScaledXValOfWall + ScaledXValOfWallTextureStart) % WallTextureSize; // Tile texture horizontally across the entire wall every time we get to the end of the WallTexture
+
+				float CurrentXValOfWallTexture = (int)(CurrentScaledXValOfWall + ScaledXValOfWallTextureStartMod) % WallTextureSize; // Tile texture horizontally across the entire wall every time we get to the end of the WallTexture
 				float VLineToTextureSizeRatio = (float)WallTextureSize / (float)TotalWallVlineHeight;
 
-				
+				/*
 				for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
 				{
 
@@ -982,16 +941,16 @@ void RenderWall(WallLine wallLine)
 					SDL_RenderDrawPoint(g_renderer, HalfWindowWidth + cl, HalfWindowHeight + WallDrawTop + CurrentWallVlineYPosition);
 
 					// Use gScreenSurface = SDL_GetWindowSurface( gWindow ) at some point instead of this slow method.
-					
+
 					//DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
-				}
+				} */
 
 
 				// Draw Wall
 				// Change render colour to the wall color & apply lighting.  Lines are drawn relative to the centre of the player's view.
 
-				//SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
-				//DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
+				SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
+				DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
 			}
 
 
@@ -1016,7 +975,7 @@ void RenderWall(WallLine wallLine)
 			}
 
 
-			
+
 
 
 
@@ -1025,16 +984,16 @@ void RenderWall(WallLine wallLine)
 			SDL_SetRenderDrawColor(g_renderer, 0, 255, 0, 255);
 
 			// Draw top line of wall
-			DrawLineWithOffset(HalfWindowWidth  + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth  + Wall.x2, HalfWindowHeight + Wall.y2a, Offset);
+			DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2a, Offset);
 
 			// Draw bottom line of wall
-			DrawLineWithOffset(HalfWindowWidth  + Wall.x1, HalfWindowHeight + Wall.y1b, HalfWindowWidth  + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
+			DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1b, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
 
 			// Draw left line of wall
-			DrawLineWithOffset(HalfWindowWidth  + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth  + Wall.x1, HalfWindowHeight + Wall.y1b, Offset);
+			DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1b, Offset);
 
 			// Draw right line of wall
-			DrawLineWithOffset(HalfWindowWidth  + Wall.x2, HalfWindowHeight + Wall.y2a, HalfWindowWidth  + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
+			DrawLineWithOffset(HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2a, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
 		}
 
 	}
@@ -1048,6 +1007,54 @@ void UnloadResources()
 	TTF_Quit();
 	SDL_Quit();
 }
+
+
+void MainLoop() // Primary game loop.  Structured in this way (separate function) so code can be compiled with emscripten easily.
+{
+
+	CountFPSAndLimit();
+
+	HandleInput();
+
+
+
+	// Set color to white & clear
+	SDL_SetRenderDrawColor(g_renderer, 64, 64, 64, 255);
+	SDL_RenderClear(g_renderer);
+
+	MoveLight();
+
+	// RenderWalls
+
+	for (auto& wall : AllWalls)
+	{
+		if (&AllWalls.back() == &wall)
+		{
+			DrawingLastWall = true; // Used to determine when the last wall is being drawn so debug info can be drawn.  Switch to false after draw.
+		}
+
+		RenderWall(wall);
+	}
+
+	// Render debug viewports
+
+	DrawViews();
+
+	for (auto& wall : AllWalls)
+	{
+		if (&AllWalls.back() == &wall)
+		{
+			DrawingLastWall = true; // Used to determine when the last wall is being drawn so debug info can be drawn.  Switch to false after draw.
+		}
+		RenderDebug(wall);
+	}
+
+
+
+	// perform render
+	SDL_RenderPresent(g_renderer);
+}
+
 
 
 int main(int argc, char * argv[])
@@ -1074,7 +1081,7 @@ int main(int argc, char * argv[])
 	/*
 	if (SDL_CreateWindowAndRenderer(WindowWidth, WindowHeight, 0, &g_window, &g_renderer) < 0)
 	{
-		ContinueGame = false;
+	ContinueGame = false;
 	} */
 
 

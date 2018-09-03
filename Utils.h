@@ -118,6 +118,7 @@ float Dot(Vector2 first, Vector2 second); // Calculate vector2 dot product.
 Vector3 Cross(Vector3 first, Vector3 second); // Calculate Vector 3 cross product.
 float Clamp(float Clampee, float MinVal, float MaxVal);
 Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
+Vector2 IntersectLineSegs(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 float Determinate(float x1, float y1, float x2, float y2);
 
 #define min(a,b) (((a) < (b)) ? (a) : (b)) // min: Choose smaller of two scalars.
@@ -129,3 +130,8 @@ Vector2 Lerp(Vector2 Start, Vector2 End, float t);
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
 bool IsPlayerCollidingWithWall();
 
+Vector2 lineSegmentIntersection(
+	double Ax, double Ay,
+	double Bx, double By,
+	double Cx, double Cy,
+	double Dx, double Dy);
