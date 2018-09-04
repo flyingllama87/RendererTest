@@ -150,7 +150,6 @@ SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel c
 {
 	SDL_Color ReturnColor;
 
-	SDL_LockSurface(Surface); // Lock surface so we can access raw pixel data.
 
 	Uint8* PixelData = (Uint8*)Surface->pixels;
 
@@ -166,7 +165,7 @@ SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel c
 	ReturnColor.b = PixelData[PixelIndexB];
 	ReturnColor.a = 255;
 
-	SDL_UnlockSurface(Surface);
+
 
 	return ReturnColor;
 
@@ -685,8 +684,6 @@ void RenderWall(WallLine wallLine)
 
 
 
-
-
 	// PERSPECTIVE VIEW / PROJECTION
 
 	Offset.x = PerspectiveView.x;
@@ -725,9 +722,14 @@ void RenderWall(WallLine wallLine)
 		if (IntersectPoint1.IsZeroVector() && IntersectPoint2.IsZeroVector() && (LineBehindPlayer || LineOutOfFOV)) // If line is not in the player's FOV, skip drawing the line.
 			return;
 
+		float PercentageLeftLineTrim = 0.0;
+		float PercentageRightLineTrim = 0.0;
+
 
 		if (IntersectPoint1.y > 0.0f) // If the line crossed the player's FOV on the right side
 		{
+			float TrimLineLength = sqrt((TransformedLineP2.x - IntersectPoint1.x) * (TransformedLineP2.x - IntersectPoint1.x) + (TransformedLineP2.z - IntersectPoint1.y) * (TransformedLineP2.z - IntersectPoint1.y));
+			PercentageRightLineTrim = TrimLineLength / AbsoluteLineLength;
 
 			TransformedLineP2.x = IntersectPoint1.x;
 			TransformedLineP2.z = IntersectPoint1.y;
@@ -736,12 +738,18 @@ void RenderWall(WallLine wallLine)
 
 		if (IntersectPoint2.y > 0.0f) // If the line crossed the player's FOV on the left side
 		{
+			float TrimLineLength = sqrt((TransformedLineP1.x - IntersectPoint2.x) * (TransformedLineP1.x - IntersectPoint2.x) + (TransformedLineP1.z - IntersectPoint2.y) * (TransformedLineP1.z - IntersectPoint2.y));
+			PercentageLeftLineTrim = TrimLineLength / AbsoluteLineLength;
+			
 			TransformedLineP1.x = IntersectPoint2.x;
 			TransformedLineP1.z = IntersectPoint2.y;
 
 		}
 
 		float TransformedLineLength = sqrt((TransformedLineP2.x - TransformedLineP1.x) * (TransformedLineP2.x - TransformedLineP1.x) + (TransformedLineP2.z - TransformedLineP1.z) * (TransformedLineP2.z - TransformedLineP1.z));
+
+		float PercentageOfWallInFOV = TransformedLineLength / AbsoluteLineLength;
+
 
 
 		// *** PERSPECTIVE DIVIDE *** What are FOV values? HFOV = 53.13 degrees according to calcs. VFOV = ?
@@ -772,58 +780,7 @@ void RenderWall(WallLine wallLine)
 		// LIGHTING CALCULATIONS (2D / Height not taken into account)
 
 
-		float LeftMostWallPreClip = min(Wall.x1, Wall.x2);
-		float RightMostWallPreClip = max(Wall.x1, Wall.x2);
-
-		float WallWidthPreClip = RightMostWallPreClip - LeftMostWallPreClip;
-
-		float AmountOfWallLeftClipped = 0.0, AmountOfWallRightClipped = 0.0; // Used to lighting calcs.  Lighting calcs are performed on the entire wall but often only a portion of the wall is shown so we need to know how much of wall was clipped.
-
-
-		
-		// Clip walls with left & right side of view pane
-		
-		if (Wall.x1 <= -HalfWindowWidth + 1) // clip wall pt1 left
-		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
-			AmountOfWallLeftClipped = Wall.x1 - PerspectiveViewClipPosTop.x;
-			Wall.x1 = PerspectiveViewClipPosTop.x;
-			Wall.y1a = PerspectiveViewClipPosTop.y;
-			Wall.y1b = PerspectiveViewClipPosBottom.y;
-		}
-
-		if (Wall.x2 <= -HalfWindowWidth + 1) // clip wall pt2 left
-		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, -HalfWindowWidth + 1, -HalfWindowHeight, -HalfWindowWidth + 1, HalfWindowHeight);
-			AmountOfWallLeftClipped = Wall.x2 - PerspectiveViewClipPosTop.x;
-			Wall.x2 = PerspectiveViewClipPosTop.x;
-			Wall.y2a = PerspectiveViewClipPosTop.y;
-			Wall.y2b = PerspectiveViewClipPosBottom.y;
-		}
-
-		if (Wall.x1 >= HalfWindowWidth - 1) // clip wall pt1 right
-		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
-			AmountOfWallRightClipped = Wall.x1 - PerspectiveViewClipPosTop.x;
-			Wall.x1 = PerspectiveViewClipPosTop.x;
-			Wall.y1a = PerspectiveViewClipPosTop.y;
-			Wall.y1b = PerspectiveViewClipPosBottom.y;
-		}
-
-		if (Wall.x2 >= HalfWindowWidth - 1) // clip wall pt2 right
-		{
-			Vector2 PerspectiveViewClipPosTop = Intersect(Wall.x1, Wall.y1a, Wall.x2, Wall.y2a, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
-			Vector2 PerspectiveViewClipPosBottom = Intersect(Wall.x1, Wall.y1b, Wall.x2, Wall.y2b, HalfWindowWidth - 2, -HalfWindowHeight, HalfWindowWidth - 2, HalfWindowHeight);
-			AmountOfWallRightClipped = Wall.x2 - PerspectiveViewClipPosTop.x;
-			Wall.x2 = PerspectiveViewClipPosTop.x;
-			Wall.y2a = PerspectiveViewClipPosTop.y;
-			Wall.y2b = PerspectiveViewClipPosBottom.y;
-		}
-		
-
+		float WallWidthPreClip = max(Wall.x1, Wall.x2) - min(Wall.x1, Wall.x2);;
 
 		// Calculations for drawing the vertical lines of the wall, floor and ceiling.
 
@@ -839,18 +796,15 @@ void RenderWall(WallLine wallLine)
 		float WallWidth = RightMostWall - LeftMostWall;
 
 
-		float WallClipStart = abs(AmountOfWallLeftClipped) / abs(WallWidthPreClip);
-		float WallClipEnd = (abs(AmountOfWallLeftClipped) + abs(WallWidth)) / abs(WallWidthPreClip);
-
 		// This code depends on the clockwise winding order of the wall points.  Consider a counter clockwise case?
 		float WallTotalXChange = AbsoluteLineP2.x - AbsoluteLineP1.x;
 		float WallTotalYChange = AbsoluteLineP2.y - AbsoluteLineP1.y;
 
-		float WallStartX = AbsoluteLineP1.x + (WallTotalXChange * WallClipStart);
-		float WallStartY = AbsoluteLineP1.y + (WallTotalYChange * WallClipStart);
+		float WallStartX = AbsoluteLineP1.x;
+		float WallStartY = AbsoluteLineP1.y;
 
-		float WallEndX = AbsoluteLineP1.x + (WallTotalXChange * WallClipEnd);
-		float WallEndY = AbsoluteLineP1.y + (WallTotalYChange * WallClipEnd);
+		float WallEndX = AbsoluteLineP1.x + WallTotalXChange;
+		float WallEndY = AbsoluteLineP1.y + WallTotalYChange;
 
 		float WallTotalVisibleXChange = WallEndX - WallStartX;
 		float WallTotalVisibleYChange = WallEndY - WallStartY;
@@ -863,14 +817,14 @@ void RenderWall(WallLine wallLine)
 		if (WallWidth > 1)
 		{
 
-			float StepXDelta = WallTotalVisibleXChange / WallWidth;
-			float StepYDelta = WallTotalVisibleYChange / WallWidth;
+			float StepXDelta = WallTotalXChange / WallWidth;
+			float StepYDelta = WallTotalYChange / WallWidth;
 
 			float NextLightScaler; // Used to hold the value of the LightScaler value 64 vlines across.  We'll interpolate towards this value.
 			float LightScalerStep = 0.0;
 
 			bool bFirstRun = true;
-
+			
 			for (int cl = LeftMostWall; cl <= RightMostWall; ++cl) // Loop over each x position of the wall. cl = current vertical line
 			{
 				if (cl % 64 == 0)
@@ -989,41 +943,37 @@ void RenderWall(WallLine wallLine)
 				// SDL_SetRenderDrawColor(g_renderer, FloorColor.r, FloorColor.g, FloorColor.b, FloorColor.a);
 				// DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, HalfWindowWidth  + cl, WindowHeight - 2, Offset);
 
-				// get color to render to wall from wall texture.
 
-				//int WallLineLength = 64 * sqrt((TransformedLineP2.x - TransformedLineP1.x) * (TransformedLineP2.x - TransformedLineP1.x) + (TransformedLineP2.y - TransformedLineP1.y) * (TransformedLineP2.y - TransformedLineP1.y)); // Get the full length of the wall.  This value is not dependant on the perspective divide / player POV.  We can use this to work out the exact position of the texture mapped wall co-ords.
-				int WallLineLength = 16 * sqrt((AbsoluteLineP2.x - AbsoluteLineP1.x) * (AbsoluteLineP2.x - AbsoluteLineP1.x) + (AbsoluteLineP2.y - AbsoluteLineP1.y) * (AbsoluteLineP2.y - AbsoluteLineP1.y));
+
+				int WallLineTextureLength = 8 * AbsoluteLineLength; // Acquire full length of wall
+
 				int WallTextureSize = WallTextureSurface->w;
 				// float WallLineTextureLength = WallLineLength - (WallLineLength % WallTextureSize); // Align to 64 pixels just to see how it looks
-				float WallLineTextureLength = WallLineLength;
 
-				float CurrentXValOfWall = cl - (int)LeftMostWall;
+				// X val code
+				int CurrentXValOfWall = cl - (int)LeftMostWall;
+				int CurrentXValOfWallStartMod = (int)((float)WallLineTextureLength * PercentageLeftLineTrim) % WallTextureSize;
+				CurrentXValOfWall = CurrentXValOfWall * ((WallLineTextureLength * PercentageOfWallInFOV) / WallWidth);
+				float CurrentXValOfWallTexture = CurrentXValOfWall + CurrentXValOfWallStartMod % WallTextureSize; // Tile texture horizontally across the entire wall every time we get to the end of the WallTexture
 
-				int ScaledXValOfWallTextureStart = (int)(WallLineTextureLength * WallClipStart);
-				int ScaledXValOfWallTextureStartMod = (int)(WallLineTextureLength * WallClipStart) % WallTextureSize;
-				int ScaledXValOfWallTextureEnd = (int)(WallLineTextureLength * WallClipEnd);
-				float ScaledXValOfWallTextureVisible = ScaledXValOfWallTextureEnd - ScaledXValOfWallTextureStart;
+				// Y value code
+				int TotalWallVlineHeight = WallDrawBottom - WallDrawTop;
+				float VLineToTextureSizeRatio = (float)WallTextureSize / (float)TotalWallVlineHeight;
 
 				if (DrawingLastWall)
 				{
 					DrawingLastWall = false;
 
-					debug1 = ScaledXValOfWallTextureVisible;
+					debug1 = VLineToTextureSizeRatio;
 					debug2 = WallWidth;
-					debug3 = CurrentXValOfWall * (ScaledXValOfWallTextureVisible / WallWidth);
+					debug3 = 0;
 
 				}
 
-				float CurrentScaledXValOfWall = CurrentXValOfWall * (ScaledXValOfWallTextureVisible / WallWidth);
 
-				int TotalWallVlineHeight = WallDrawBottom - WallDrawTop;
-
-				float CurrentXValOfWallTexture = (int)(CurrentScaledXValOfWall + ScaledXValOfWallTextureStartMod) % WallTextureSize; // Tile texture horizontally across the entire wall every time we get to the end of the WallTexture
-				float VLineToTextureSizeRatio = (float)WallTextureSize / (float)TotalWallVlineHeight;
-
-				/*
 				for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
 				{
+					// get color to render to wall from wall texture.
 
 					SDL_Color CurrentPixelColor = GetPixelFromTexture(WallTextureSurface, CurrentXValOfWallTexture, (float)CurrentWallVlineYPosition * (float)VLineToTextureSizeRatio);
 					SDL_SetRenderDrawColor(g_renderer, CurrentPixelColor.r * LightScaler, CurrentPixelColor.g * LightScaler, CurrentPixelColor.b * LightScaler, 255);
@@ -1032,16 +982,15 @@ void RenderWall(WallLine wallLine)
 					// Use gScreenSurface = SDL_GetWindowSurface( gWindow ) at some point instead of this slow method.
 
 					//DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
-				} */
+				} 
 
 
 				// Draw Wall
 				// Change render colour to the wall color & apply lighting.  Lines are drawn relative to the centre of the player's view.
 
-				SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
-				DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
+				//SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
+				// DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
 			}
-
 
 			// DRAW LIGHT SOURCE PIXEL.  This needs to be done per wall as each wall draws the ceiling above it & the light pixel could be above any of the walls.
 
@@ -1114,7 +1063,7 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 	MoveLight();
 
 	// RenderWalls
-
+	SDL_LockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
 	for (auto& wall : AllWalls)
 	{
 		if (&AllWalls.back() == &wall)
@@ -1124,6 +1073,7 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 
 		RenderWall(wall);
 	}
+	SDL_UnlockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
 
 	// Render debug viewports
 
