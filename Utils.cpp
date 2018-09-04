@@ -67,102 +67,11 @@ Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, fl
 }
 
 
-Vector2 lineSegmentIntersection(
-	double Ax, double Ay,
-	double Bx, double By,
-	double Cx, double Cy,
-	double Dx, double Dy) {
-
-	Vector2 ReturnVector = { 0.0f, 0.0f };
-
-	double  distAB, theCos, theSin, newX, ABpos;
-
-	//  Fail if either line segment is zero-length.
-	if (Ax == Bx && Ay == By || Cx == Dx && Cy == Dy) return ReturnVector;
-
-	//  Fail if the segments share an end-point.
-	if (Ax == Cx && Ay == Cy || Bx == Cx && By == Cy
-		|| Ax == Dx && Ay == Dy || Bx == Dx && By == Dy) {
-		return ReturnVector;
-	}
-
-	//  (1) Translate the system so that point A is on the origin.
-	Bx -= Ax; By -= Ay;
-	Cx -= Ax; Cy -= Ay;
-	Dx -= Ax; Dy -= Ay;
-
-	//  Discover the length of segment A-B.
-	distAB = sqrt(Bx*Bx + By * By);
-
-	//  (2) Rotate the system so that point B is on the positive X axis.
-	theCos = Bx / distAB;
-	theSin = By / distAB;
-	newX = Cx * theCos + Cy * theSin;
-	Cy = Cy * theCos - Cx * theSin; Cx = newX;
-	newX = Dx * theCos + Dy * theSin;
-	Dy = Dy * theCos - Dx * theSin; Dx = newX;
-
-	//  Fail if segment C-D doesn't cross line A-B.
-	if (Cy<0. && Dy<0. || Cy >= 0. && Dy >= 0.) return ReturnVector;
-
-	//  (3) Discover the position of the intersection point along line A-B.
-	ABpos = Dx + (Cx - Dx)*Dy / (Dy - Cy);
-
-	//  Fail if segment C-D crosses line A-B outside of segment A-B.
-	if (ABpos<0. || ABpos>distAB) return ReturnVector;
-
-	//  (4) Apply the discovered position to line A-B in the original coordinate system.
-	ReturnVector.x = Ax + ABpos * theCos;
-	ReturnVector.y = Ay + ABpos * theSin;
-
-	//  Success.
-	return ReturnVector;
-}
-
-
-
-/*
-Vector2 IntersectLineSegs(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
-{
-
-	Vector2 RetPoint = { 0.0f, 0.0f };
-
-	Vector2 qp = { x3 - x1, y3 - y1 };
-	Vector2 r = { x2 - x1, y2 - y1 };
-	Vector2 s = { x4 - x3, y4 - y3 };
-
-
-	float qpXr = Determinate(qp.x, qp.y, r.x, r.y);
-	float qpXs = Determinate(qp.x, qp.y, s.x, s.y);
-	float rXs = Determinate(r.x, r.y, s.x, s.y);
-
-
-	if (qpXr == 0.0f || rXs == 0.0f)
-		return RetPoint; // return empty vector as lines are collinear.	
-
-	float t = qpXs / rXs;
-	float u = qpXr / rXs;
-
-	if (t > 1.0 || t < 0.0 || u > 1.0 || u < 0.0)
-		return RetPoint; // return empty vector as line's don't intersect.
-
-
-	//	RetPoint.x = (x3 + u * (x4 - x3));
-	//	RetPoint.y = (y3 + u * (y4 - y3));
-
-	RetPoint.x = (x1 + t * (x2 - x1));
-	RetPoint.y = (y1 + t * (y2 - y1));
-
-	return RetPoint;
-} */
-
-
 
 
 // Returns point of intersection between two line segments. Returns zero vector if lines segs don't intersect.  See 'https://en.wikipedia.org/wiki/Line–line_intersection' for more.
 Vector2 IntersectLineSegs(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
 {
-
 
 	Vector2 RetPoint = { 0.0f, 0.0f };
 
@@ -239,6 +148,16 @@ bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2) // Figure out which side o
 		return false;
 }
 
+bool LineSide(Vector2 LinePt1, Vector2 LinePt2, Vector2 Point) // Figure out which side of a line a point is on.  See https://stackoverflow.com/questions/1560492/how-to-tell-whether-a-point-is-to-the-right-or-left-side-of-a-line#3461533
+{
+	// Get determinate of matrix made 2 vectors.
+	double det = (LinePt1.x - LinePt2.x) * (LinePt1.y - Point.y) - (LinePt1.x - Point.x) * (LinePt1.y - LinePt2.y);
+	if (det > 0.0)
+		return true;
+	else
+		return false;
+}
+
 Vector2 Lerp(Vector2 Start, Vector2 End, float t)
 {
 	Vector2 ReturnVector;
@@ -248,3 +167,104 @@ Vector2 Lerp(Vector2 Start, Vector2 End, float t)
 
 	return ReturnVector;
 }
+
+
+
+
+
+
+////////////////////////////////////////////////
+
+
+// Verbose/expensive method of calculating line segment intersection.  Possibly most accurate model.
+
+/*
+Vector2 lineSegmentIntersection(
+double Ax, double Ay,
+double Bx, double By,
+double Cx, double Cy,
+double Dx, double Dy) {
+
+Vector2 ReturnVector = { 0.0f, 0.0f };
+
+double  distAB, theCos, theSin, newX, ABpos;
+
+//  Fail if either line segment is zero-length.
+if (Ax == Bx && Ay == By || Cx == Dx && Cy == Dy) return ReturnVector;
+
+//  Fail if the segments share an end-point.
+if (Ax == Cx && Ay == Cy || Bx == Cx && By == Cy
+|| Ax == Dx && Ay == Dy || Bx == Dx && By == Dy) {
+return ReturnVector;
+}
+
+//  (1) Translate the system so that point A is on the origin.
+Bx -= Ax; By -= Ay;
+Cx -= Ax; Cy -= Ay;
+Dx -= Ax; Dy -= Ay;
+
+//  Discover the length of segment A-B.
+distAB = sqrt(Bx*Bx + By * By);
+
+//  (2) Rotate the system so that point B is on the positive X axis.
+theCos = Bx / distAB;
+theSin = By / distAB;
+newX = Cx * theCos + Cy * theSin;
+Cy = Cy * theCos - Cx * theSin; Cx = newX;
+newX = Dx * theCos + Dy * theSin;
+Dy = Dy * theCos - Dx * theSin; Dx = newX;
+
+//  Fail if segment C-D doesn't cross line A-B.
+if (Cy<0. && Dy<0. || Cy >= 0. && Dy >= 0.) return ReturnVector;
+
+//  (3) Discover the position of the intersection point along line A-B.
+ABpos = Dx + (Cx - Dx)*Dy / (Dy - Cy);
+
+//  Fail if segment C-D crosses line A-B outside of segment A-B.
+if (ABpos<0. || ABpos>distAB) return ReturnVector;
+
+//  (4) Apply the discovered position to line A-B in the original coordinate system.
+ReturnVector.x = Ax + ABpos * theCos;
+ReturnVector.y = Ay + ABpos * theSin;
+
+//  Success.
+return ReturnVector;
+}
+*/
+
+
+
+/* Less concise but clearer algo than the function below.
+Vector2 IntersectLineSegs(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
+{
+
+Vector2 RetPoint = { 0.0f, 0.0f };
+
+Vector2 qp = { x3 - x1, y3 - y1 };
+Vector2 r = { x2 - x1, y2 - y1 };
+Vector2 s = { x4 - x3, y4 - y3 };
+
+
+float qpXr = Determinate(qp.x, qp.y, r.x, r.y);
+float qpXs = Determinate(qp.x, qp.y, s.x, s.y);
+float rXs = Determinate(r.x, r.y, s.x, s.y);
+
+
+if (qpXr == 0.0f || rXs == 0.0f)
+return RetPoint; // return empty vector as lines are collinear.
+
+float t = qpXs / rXs;
+float u = qpXr / rXs;
+
+if (t > 1.0 || t < 0.0 || u > 1.0 || u < 0.0)
+return RetPoint; // return empty vector as line's don't intersect.
+
+
+//	RetPoint.x = (x3 + u * (x4 - x3));
+//	RetPoint.y = (y3 + u * (y4 - y3));
+
+RetPoint.x = (x1 + t * (x2 - x1));
+RetPoint.y = (y1 + t * (y2 - y1));
+
+return RetPoint;
+} */
