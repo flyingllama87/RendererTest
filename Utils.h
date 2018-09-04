@@ -49,6 +49,23 @@ typedef struct Vector2
 		x = 0.0; y = 0.0;
 	}
 
+	bool operator==(Vector2 rhs)
+	{
+		if (x == rhs.x && y == rhs.y)
+			return true;
+		else
+			return false;
+	}
+
+
+	bool IsZeroVector()
+	{
+		if (x == 0.0f && y == 0.0f)
+			return true;
+		else
+			return false;
+	}
+
 } Vector2;
 
 typedef struct Vector3
@@ -102,7 +119,7 @@ typedef struct WallLine // Wall points (defined in absolute/top view) & wall col
 
 // **** FUNCTION DECLARATIONS ****
 
-bool LoadMap();
+// bool LoadMap();
 
 void RenderWall(WallLine wallLine);
 void RenderDebug(WallLine wallLine);
@@ -127,11 +144,12 @@ float Determinate(float x1, float y1, float x2, float y2);
 Vector2 Lerp(Vector2 Start, Vector2 End, float t);
 
 // Physics functions
+bool LineSide(Vector2 LinePt1, Vector2 LinePt2, Vector2 Point);
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
 bool IsPlayerCollidingWithWall();
 
-Vector2 lineSegmentIntersection(
+/*Vector2 lineSegmentIntersection(
 	double Ax, double Ay,
 	double Bx, double By,
 	double Cx, double Cy,
-	double Dx, double Dy);
+	double Dx, double Dy);*/
