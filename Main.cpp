@@ -45,6 +45,12 @@ FEATURES TO IMPLEMENT:
 
 // **** GLOBAL DATA ****
 
+bool P1OnLeftSideOfClipPlane = false;
+bool P2OnLeftSideOfClipPlane = false;
+bool P1OnRightSideOfClipPlane = false;
+bool P2OnRightSideOfClipPlane = false;
+
+
 int TickCount = 0, PreviousTickCount, fps, TickDelta; // used for fps monitor
 
 bool ContinueGame = true; // used as a conditional for exiting the app.
@@ -394,12 +400,12 @@ void DrawDebugText()
 		"FPS: %d \n"
 		"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n"
-		" Debug1: %.2f Debug2: %.2f Debug3: %.2f \n\n"
+		" Debug1: %.2f Debug2: %.2f Debug3: L1: %d L2: %d R1: %d R2: %d \n\n"
 		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light (disabled for now), left ctrl to crouch\nPress q to quit.",
-		fps,
+		fps, 
 		player.x, player.y, //Player position
 		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle),
-		debug1, debug2, debug3
+		debug1, debug2, P1OnLeftSideOfClipPlane, P2OnLeftSideOfClipPlane, P1OnRightSideOfClipPlane, P2OnRightSideOfClipPlane
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -538,6 +544,7 @@ void RenderDebug(WallLine wallLine)
 	// calculate x position of verticies based on where the player is looking
 	TransformedLineP1.x = TransformedLineP1.y * cos(Angle) - TransformedLineP1.x * sin(Angle);
 	TransformedLineP2.x = TransformedLineP2.y * cos(Angle) - TransformedLineP2.x * sin(Angle);
+	
 	/*
 	IntersectPoint1 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -60, 2);
 	IntersectPoint2 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, 0.0001, 0.0001, 60, 2);
@@ -572,51 +579,37 @@ void RenderDebug(WallLine wallLine)
 			TransformedLineP2.x = IntersectPoint2.x;
 			TransformedLineP2.z = IntersectPoint2.y;
 		}
-	}*/
+	} */
 
 	
 	
-	Vector2 LeftSideClipLineP1 = { (float)-0.0001, (float)0.0001 };
-	Vector2 LeftSideClipLineP2 = { -(HalfViewWidth / 2), (float)HalfViewHeight };
+	Vector2 RightSideClipLineP1 = { (float)-0.0001, (float)0.0001 };
+	Vector2 RightSideClipLineP2 = { -(HalfViewWidth / 2), (float)HalfViewHeight };
 
-	Vector2 RightSideClipLineP1 = { (float)0.0001, (float)0.0001 };
-	Vector2 RightSideClipLineP2 = { (HalfViewWidth / 2), (float)HalfViewHeight };
+	Vector2 LeftSideClipLineP1 = { (float)0.0001, (float)0.0001 };
+	Vector2 LeftSideClipLineP2 = { (HalfViewWidth / 2), (float)HalfViewHeight };
 
-	bool P1OnRightSideOfClipPlane = LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-	bool P2OnRightSideOfClipPlane = LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
-	bool P1OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-	bool P2OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+	P1OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+	P2OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+	P1OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+	P2OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
 
+	bool LineBehindPlayer = false;
+	bool LineOutOfFOV = false; // Line can be in FOV but behind the player due to the way 'LineSide' works so account for this with above bool 'LineBehindPlayer'.
 
-	bool LineOutsideOfView = false;
+	if (TransformedLineP1.z < 0.0 && TransformedLineP2.z < 0.0)
+		LineBehindPlayer = true;
 
-	if (TransformedLineP1.z < 0.0 || TransformedLineP2.z < 0.0)
-		LineOutsideOfView = true;
-
-
-	//if (TransformedLineP1.z < 0.0 || TransformedLineP2.z < 0.0)
-	//	LineOutsideOfView = true;
+	if (!P1OnLeftSideOfClipPlane || !P2OnLeftSideOfClipPlane || !P1OnRightSideOfClipPlane || !P2OnLeftSideOfClipPlane)
+		LineOutOfFOV = true;
 
 
 	IntersectPoint1 = IntersectLineSegs(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -(HalfViewWidth / 2), HalfViewHeight);
 	IntersectPoint2 = IntersectLineSegs(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, 0.0001, 0.0001, HalfViewWidth / 2, HalfViewHeight);
 
-	if (AbsoluteLineP1.x == 0 && AbsoluteLineP1.y == 50.0 && AbsoluteLineP2.x == 0.0)
-	{
-		// Draw P1 Red
-		SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
-		DrawPixelWithOffset((HalfViewWidth - TransformedLineP1.x), (HalfViewHeight - TransformedLineP1.z), Offset);
-
-		// Draw P2 Purple
-		SDL_SetRenderDrawColor(g_renderer, 255, 255, 0, 255);
-		DrawPixelWithOffset((HalfViewWidth - TransformedLineP2.x), (HalfViewHeight - TransformedLineP2.z), Offset);
-
-		int i = 9;
-	}
-		
-
-	if (IntersectPoint1.IsZeroVector() && IntersectPoint2.IsZeroVector() && LineOutsideOfView) // If line is not in the player's FOV, skip drawing the line.
+	if (IntersectPoint1.IsZeroVector() && IntersectPoint2.IsZeroVector() && (LineBehindPlayer || LineOutOfFOV)) // If line is not in the player's FOV, skip drawing the line.
 		return;
+
 
 	if (IntersectPoint1.y > 0.0f) // If the line crossed the player's FOV on the right side
 	{
@@ -639,24 +632,8 @@ void RenderDebug(WallLine wallLine)
 	// Change render colour
 	SDL_SetRenderDrawColor(g_renderer, 0, 255, 0, 255);
 
-
-
 	// Draw wall / line.
 	DrawLineWithOffset((HalfViewWidth - TransformedLineP1.x), (HalfViewHeight - TransformedLineP1.z), (HalfViewWidth - TransformedLineP2.x), (HalfViewHeight - TransformedLineP2.z), Offset);
-
-	if (AbsoluteLineP1.x == 0 && AbsoluteLineP1.y == 50.0 && AbsoluteLineP2.x == 0.0)
-	{
-		// Draw P1 Red
-		SDL_SetRenderDrawColor(g_renderer, 255, 0, 0, 255);
-		DrawPixelWithOffset((HalfViewWidth - TransformedLineP1.x), (HalfViewHeight - TransformedLineP1.z), Offset);
-
-		// Draw P2 Purple
-		SDL_SetRenderDrawColor(g_renderer, 255, 255, 0, 255);
-		DrawPixelWithOffset((HalfViewWidth - TransformedLineP2.x), (HalfViewHeight - TransformedLineP2.z), Offset);
-
-		int i = 9;
-	}
-
 
 	DrawPixelWithOffset(
 		(float)HalfViewWidth - TransformedLightPos.x,
@@ -719,99 +696,53 @@ void RenderWall(WallLine wallLine)
 	if (TransformedLineP1.z > 0.0 || TransformedLineP2.z > 0.0) // If either point of the wall is in front of the player (Note: not neccessarily in the FOV), draw the wall.
 	{
 
-		IntersectPoint1 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -60, 2);
-		IntersectPoint2 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, 0.0001, 0.0001, 60, 2);
-
-		// If the line is partially behind the player (crosses the viewplane, clip it)
-
-		if (TransformedLineP1.z <= 0.0) // If PT1 is behind the player
-		{
-
-			if (IntersectPoint1.y > 0.0)
-			{
-				TransformedLineP1.x = IntersectPoint1.x;
-				TransformedLineP1.z = IntersectPoint1.y;
-			}
-			else
-			{
-				TransformedLineP1.x = IntersectPoint2.x;
-				TransformedLineP1.z = IntersectPoint2.y;
-			}
-		}
-
-		if (TransformedLineP2.z <= 0.0) // If PT2 is behind the player
-		{
-
-			if (IntersectPoint1.y > 0.0)
-			{
-				TransformedLineP2.x = IntersectPoint1.x;
-				TransformedLineP2.z = IntersectPoint1.y;
-			}
-			else
-			{
-				TransformedLineP2.x = IntersectPoint2.x;
-				TransformedLineP2.z = IntersectPoint2.y;
-			}
-		}
-
-
 		// Clip lines again but this time to the width of the FOV
 
-		
-		//IntersectPoint1 = lineSegmentIntersection(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -(HalfViewWidth / 2), HalfViewHeight);
+		Vector2 RightSideClipLineP1 = { (float)-0.0001, (float)0.0001 };
+		Vector2 RightSideClipLineP2 = { -(HalfViewWidth / 2), (float)HalfViewHeight };
+
+		Vector2 LeftSideClipLineP1 = { (float)0.0001, (float)0.0001 };
+		Vector2 LeftSideClipLineP2 = { (HalfViewWidth / 2), (float)HalfViewHeight };
+
+		P1OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+		P2OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+		P1OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+		P2OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+
+		bool LineBehindPlayer = false;
+		bool LineOutOfFOV = false; // Line can be in FOV but behind the player due to the way 'LineSide' works so account for this with above bool 'LineBehindPlayer'.
+
+		if (TransformedLineP1.z < 0.0 && TransformedLineP2.z < 0.0)
+			LineBehindPlayer = true;
+
+		if (!P1OnLeftSideOfClipPlane || !P2OnLeftSideOfClipPlane || !P1OnRightSideOfClipPlane || !P2OnLeftSideOfClipPlane)
+			LineOutOfFOV = true;
+
 
 		IntersectPoint1 = IntersectLineSegs(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -(HalfViewWidth / 2), HalfViewHeight);
 		IntersectPoint2 = IntersectLineSegs(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, 0.0001, 0.0001, HalfViewWidth / 2, HalfViewHeight);
 
-		// if (IntersectPoint1.IsZeroVector() && IntersectPoint2.IsZeroVector()) // If line is not in the player's FOV, skip drawing the line.
-		// 	return;
-	
+		if (IntersectPoint1.IsZeroVector() && IntersectPoint2.IsZeroVector() && (LineBehindPlayer || LineOutOfFOV)) // If line is not in the player's FOV, skip drawing the line.
+			return;
+
+
 		if (IntersectPoint1.y > 0.0f) // If the line crossed the player's FOV on the right side
 		{
-			Vector2 RightSideClipLineP1 = { (float)-0.0001, (float)0.0001 };
-			Vector2 RightSideClipLineP2 = { -(HalfViewWidth / 2), (float)HalfViewHeight };
 
-			bool ClipTransformPt1 = LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-			bool ClipTransformPt2 = LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
-
-			if (ClipTransformPt2 == true)
-			{
-				TransformedLineP2.x = IntersectPoint1.x;
-				TransformedLineP2.z = IntersectPoint1.y;
-			}
-			if (ClipTransformPt1 == true)
-			{
-				TransformedLineP1.x = IntersectPoint1.x;
-				TransformedLineP1.z = IntersectPoint1.y;
-			}
+			TransformedLineP2.x = IntersectPoint1.x;
+			TransformedLineP2.z = IntersectPoint1.y;
 
 		}
 
 		if (IntersectPoint2.y > 0.0f) // If the line crossed the player's FOV on the left side
 		{
-			Vector2 LeftSideClipLineP1 = { (float)0.0001, (float)0.0001 };
-			Vector2 LeftSideClipLineP2 = { (HalfViewWidth / 2), (float)HalfViewHeight };
-
-			bool ClipTransformPt1 = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-			bool ClipTransformPt2 = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
-
-			if (ClipTransformPt1 == true)
-			{
-				TransformedLineP2.x = IntersectPoint2.x;
-				TransformedLineP2.z = IntersectPoint2.y;
-			}
-			if (ClipTransformPt2 == true)
-			{
-				TransformedLineP1.x = IntersectPoint2.x;
-				TransformedLineP1.z = IntersectPoint2.y;
-			}
+			TransformedLineP1.x = IntersectPoint2.x;
+			TransformedLineP1.z = IntersectPoint2.y;
 
 		}
 
 		float TransformedLineLength = sqrt((TransformedLineP2.x - TransformedLineP1.x) * (TransformedLineP2.x - TransformedLineP1.x) + (TransformedLineP2.z - TransformedLineP1.z) * (TransformedLineP2.z - TransformedLineP1.z));
 
-		if (TransformedLineLength < 0.0)
-			return;
 
 		// *** PERSPECTIVE DIVIDE *** What are FOV values? HFOV = 53.13 degrees according to calcs. VFOV = ?
 
