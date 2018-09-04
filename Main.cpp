@@ -800,14 +800,8 @@ void RenderWall(WallLine wallLine)
 		float WallTotalXChange = AbsoluteLineP2.x - AbsoluteLineP1.x;
 		float WallTotalYChange = AbsoluteLineP2.y - AbsoluteLineP1.y;
 
-		float WallStartX = AbsoluteLineP1.x;
-		float WallStartY = AbsoluteLineP1.y;
-
 		float WallEndX = AbsoluteLineP1.x + WallTotalXChange;
 		float WallEndY = AbsoluteLineP1.y + WallTotalYChange;
-
-		float WallTotalVisibleXChange = WallEndX - WallStartX;
-		float WallTotalVisibleYChange = WallEndY - WallStartY;
 
 		Vector2 VectorToLight;
 		float DistanceToLight;
@@ -836,8 +830,8 @@ void RenderWall(WallLine wallLine)
 						NumPixelsToLookAhead = RightMostWall - cl;
 					}
 
-					float CurrentXWallPoint = WallStartX + (StepXDelta * ((cl + NumPixelsToLookAhead) - LeftMostWall));
-					float CurrentYWallPoint = WallStartY + (StepYDelta * ((cl + NumPixelsToLookAhead) - LeftMostWall));
+					float CurrentXWallPoint = AbsoluteLineP1.x + (StepXDelta * ((cl + NumPixelsToLookAhead) - LeftMostWall));
+					float CurrentYWallPoint = AbsoluteLineP1.y + (StepYDelta * ((cl + NumPixelsToLookAhead) - LeftMostWall));
 
 					VectorToLight = { LightPos.x - CurrentXWallPoint, LightPos.y - CurrentYWallPoint };
 					DistanceToLight = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
@@ -864,8 +858,8 @@ void RenderWall(WallLine wallLine)
 				else if (bFirstRun)
 				{
 
-					float CurrentXWallPoint = WallStartX + (StepXDelta * ((cl + 1) - LeftMostWall));
-					float CurrentYWallPoint = WallStartY + (StepYDelta * ((cl + 1) - LeftMostWall));
+					float CurrentXWallPoint = AbsoluteLineP1.x + (StepXDelta * ((cl + 1) - LeftMostWall));
+					float CurrentYWallPoint = AbsoluteLineP1.y + (StepYDelta * ((cl + 1) - LeftMostWall));
 
 					VectorToLight = { LightPos.x - CurrentXWallPoint, LightPos.y - CurrentYWallPoint };
 					DistanceToLight = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
@@ -889,8 +883,8 @@ void RenderWall(WallLine wallLine)
 
 					int Next64AlignedVLine = abs(cl % 64);
 					// Calculate light vals for the next block of pixels
-					CurrentXWallPoint = WallStartX + (StepXDelta * ((cl + Next64AlignedVLine) - LeftMostWall));
-					CurrentYWallPoint = WallStartY + (StepYDelta * ((cl + Next64AlignedVLine) - LeftMostWall));
+					CurrentXWallPoint = AbsoluteLineP1.x + (StepXDelta * ((cl + Next64AlignedVLine) - LeftMostWall));
+					CurrentYWallPoint = AbsoluteLineP1.y + (StepYDelta * ((cl + Next64AlignedVLine) - LeftMostWall));
 
 					VectorToLight = { LightPos.x - CurrentXWallPoint, LightPos.y - CurrentYWallPoint };
 					DistanceToLight = sqrt(VectorToLight.x * VectorToLight.x + VectorToLight.y * VectorToLight.y);
@@ -971,7 +965,7 @@ void RenderWall(WallLine wallLine)
 				}
 
 
-				for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
+				/*for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
 				{
 					// get color to render to wall from wall texture.
 
@@ -982,14 +976,14 @@ void RenderWall(WallLine wallLine)
 					// Use gScreenSurface = SDL_GetWindowSurface( gWindow ) at some point instead of this slow method.
 
 					//DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
-				} 
+				} */
 
 
 				// Draw Wall
 				// Change render colour to the wall color & apply lighting.  Lines are drawn relative to the centre of the player's view.
 
-				//SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
-				// DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
+				SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
+				DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
 			}
 
 			// DRAW LIGHT SOURCE PIXEL.  This needs to be done per wall as each wall draws the ceiling above it & the light pixel could be above any of the walls.
