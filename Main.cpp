@@ -3,20 +3,16 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include "Utils.h"
-#include <cassert>
+// #include <cassert>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
-#define WindowWidth 1680
-#define WindowHeight 1050
+#define WindowWidth 1280
+#define WindowHeight 720
 #define HalfWindowHeight WindowHeight/2
 #define HalfWindowWidth WindowWidth/2
-
-#define hfov (0.73f*WindowHeight)  // Affects the horizontal field of vision
-#define vfov (.2f*WindowHeight)    // Affects the vertical field of vision
-
 
 /*
 WARNING:  This code is messy & purely PoC.  You've been warned.
@@ -71,7 +67,7 @@ float Angle = M_PI; // starting angle for player.
 
 
 
-					// WALL DEFS & RESOURCES
+// WALL DEFS & RESOURCES
 
 SDL_Color CeilingColor = { 64,64,64,255 };
 SDL_Color FloorColor = { 64,64,64,255 };
@@ -117,7 +113,7 @@ bool LoadResources() // Map, Textures, sounds etc.
 {
 
 	SDL_Surface* BMPSurface = SDL_LoadBMP("brick64x64_24b.bmp");
-	assert(BMPSurface != NULL); // Assert if BMP load failed.
+	// assert(BMPSurface != NULL); // Assert if BMP load failed.
 
 	// Used for debugging surface pixel format.
 	// Uint8* BMPPixelData = (Uint8*)BMPSurface->pixels; // get raw pixel data in weird format.
@@ -146,14 +142,14 @@ bool LoadResources() // Map, Textures, sounds etc.
 }
 
 
-SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel color from given surface & xy coords.
+inline SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel color from given surface & xy coords.
 {
 	SDL_Color ReturnColor;
 
 
 	Uint8* PixelData = (Uint8*)Surface->pixels;
 
-	int PixelRow = Surface->pitch * y;
+	int PixelRow = (Surface->pitch * y);
 	int PixelColumn = Surface->format->BytesPerPixel * x;
 	int PixelIndexR = PixelRow + PixelColumn;
 	int PixelIndexG = PixelRow + PixelColumn + 1;
@@ -396,15 +392,15 @@ void DrawDebugText()
 {
 	// Draw info text
 	sprintf(message,
-		"FPS: %d \n"
-		"Player X is %.2f, Player Y is %.2f. \n"
+		"FPS: %d \n",
+		/*"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n"
 		" Debug1: %.2f Debug2: %.2f Debug3: L1: %d L2: %d R1: %d R2: %d \n\n"
-		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light (disabled for now), left ctrl to crouch\nPress q to quit.",
-		fps, 
-		player.x, player.y, //Player position
+		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light (disabled for now), left ctrl to crouch\nPress q to quit.",*/
+		fps
+		/*player.x, player.y, //Player position
 		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle),
-		debug1, debug2, P1OnLeftSideOfClipPlane, P2OnLeftSideOfClipPlane, P1OnRightSideOfClipPlane, P2OnRightSideOfClipPlane
+		debug1, debug2, P1OnLeftSideOfClipPlane, P2OnLeftSideOfClipPlane, P1OnRightSideOfClipPlane, P2OnRightSideOfClipPlane*/
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -920,13 +916,19 @@ void RenderWall(WallLine wallLine)
 				YDeltaBottom = (cl - LeftMostWall) * (HeightDeltaBottom / WallWidth); // Calculate the change in Y position for the current vertical line.  Used for the floor vertical line.
 
 				float WallDrawTop = Wall.y1a + YDeltaTop; // Calculate the Y position to draw the vertical ceiling line to.
+				
 				if (WallDrawTop < -HalfWindowHeight) // Set a minimum for this value to ensure vertical ceiling line at least starts at the top of the viewport and is not drawn above that (non-visible area)
+				{
+
 					WallDrawTop = -HalfWindowHeight;
+				}
 
 				float WallDrawBottom = Wall.y1b - YDeltaBottom; // Calculate the Y position to draw the vertical floor line from.
+				
 				if (WallDrawBottom > HalfWindowHeight) // Same as above but sets a maximum.
+				{
 					WallDrawBottom = HalfWindowHeight;
-
+				}
 
 				// COULD WE DRAW CEILING AND FLOOR AS TWO LARGE RECTANGLES AND JUST DRAW THE WALL ON TOP? LESS DRAW CALLS, MORE EFFICIENT?
 				// Change render colour to the ceiling color.  Lines are drawn relative to the centre of the player's view.
@@ -946,9 +948,9 @@ void RenderWall(WallLine wallLine)
 
 				// X val code
 				int CurrentXValOfWall = cl - (int)LeftMostWall;
-				int CurrentXValOfWallStartMod = (int)((float)WallLineTextureLength * PercentageLeftLineTrim) % WallTextureSize;
+				int CurrentXValOfWallStartMod =  (int)((float)WallLineTextureLength * PercentageLeftLineTrim) % WallTextureSize;
 				CurrentXValOfWall = CurrentXValOfWall * ((WallLineTextureLength * PercentageOfWallInFOV) / WallWidth);
-				float CurrentXValOfWallTexture = CurrentXValOfWall + CurrentXValOfWallStartMod % WallTextureSize; // Tile texture horizontally across the entire wall every time we get to the end of the WallTexture
+				float CurrentXValOfWallTexture = (CurrentXValOfWall + CurrentXValOfWallStartMod) % WallTextureSize; // Tile texture horizontally across the entire wall every time we get to the end of the WallTexture
 
 				// Y value code
 				int TotalWallVlineHeight = WallDrawBottom - WallDrawTop;
@@ -965,25 +967,29 @@ void RenderWall(WallLine wallLine)
 				}
 
 
-				/*for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
+				for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
 				{
 					// get color to render to wall from wall texture.
 
 					SDL_Color CurrentPixelColor = GetPixelFromTexture(WallTextureSurface, CurrentXValOfWallTexture, (float)CurrentWallVlineYPosition * (float)VLineToTextureSizeRatio);
+					
+					
+					
+					// SDL_SetRenderDrawColor(g_renderer, CurrentPixelColor.r, CurrentPixelColor.g, CurrentPixelColor.b, 255);
 					SDL_SetRenderDrawColor(g_renderer, CurrentPixelColor.r * LightScaler, CurrentPixelColor.g * LightScaler, CurrentPixelColor.b * LightScaler, 255);
 					SDL_RenderDrawPoint(g_renderer, HalfWindowWidth + cl, HalfWindowHeight + WallDrawTop + CurrentWallVlineYPosition);
 
-					// Use gScreenSurface = SDL_GetWindowSurface( gWindow ) at some point instead of this slow method.
+					// Use g_surface = SDL_GetWindowSurface(g_window); at some point instead of this slow method.
 
 					//DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
-				} */
+				} 
 
 
 				// Draw Wall
 				// Change render colour to the wall color & apply lighting.  Lines are drawn relative to the centre of the player's view.
 
-				SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
-				DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
+				// SDL_SetRenderDrawColor(g_renderer, wallLine.wallColor.r * LightScaler, wallLine.wallColor.g * LightScaler, wallLine.wallColor.b * LightScaler, wallLine.wallColor.a);
+				// DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
 			}
 
 			// DRAW LIGHT SOURCE PIXEL.  This needs to be done per wall as each wall draws the ceiling above it & the light pixel could be above any of the walls.
@@ -1013,19 +1019,19 @@ void RenderWall(WallLine wallLine)
 
 
 			// Change render colour to green
-			SDL_SetRenderDrawColor(g_renderer, 0, 255, 0, 255);
+			// SDL_SetRenderDrawColor(g_renderer, 0, 255, 0, 255);
 
 			// Draw top line of wall
-			DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2a, Offset);
+			// DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2a, Offset);
 
 			// Draw bottom line of wall
-			DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1b, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
+			// DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1b, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
 
 			// Draw left line of wall
-			DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1b, Offset);
+			// DrawLineWithOffset(HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1a, HalfWindowWidth + Wall.x1, HalfWindowHeight + Wall.y1b, Offset);
 
 			// Draw right line of wall
-			DrawLineWithOffset(HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2a, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
+			// DrawLineWithOffset(HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2a, HalfWindowWidth + Wall.x2, HalfWindowHeight + Wall.y2b, Offset);
 		}
 
 	}
@@ -1058,6 +1064,12 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 
 	// RenderWalls
 	SDL_LockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
+	// SDL_LockSurface(g_surface);
+
+	// Uint8* BMPPixelData = (Uint8*)BMPSurface->pixels; // get raw pixel data in weird format.
+	// const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format);
+	// const char* surfacePixelFormatName2 = SDL_GetPixelFormatName(g_surface->format->format);
+
 	for (auto& wall : AllWalls)
 	{
 		if (&AllWalls.back() == &wall)
@@ -1067,8 +1079,9 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 
 		RenderWall(wall);
 	}
+	
 	SDL_UnlockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
-
+	// SDL_UnlockSurface(g_surface);
 	// Render debug viewports
 
 	DrawViews();
@@ -1103,20 +1116,12 @@ int main(int argc, char * argv[])
 		ContinueGame = false;
 	}
 	g_surface = SDL_GetWindowSurface(g_window);
-	g_renderer = SDL_CreateRenderer(g_window, -1, NULL);
+	g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE); //SDL_RENDERER_ACCELERATED // SDL_RENDERER_SOFTWARE
 
 	if (!g_renderer) {
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Render creation for surface fail : %s\n", SDL_GetError());
 		ContinueGame = false;
 	}
-
-
-	/*
-	if (SDL_CreateWindowAndRenderer(WindowWidth, WindowHeight, 0, &g_window, &g_renderer) < 0)
-	{
-	ContinueGame = false;
-	} */
-
 
 
 	font = TTF_OpenFont("font.ttf", 16);
