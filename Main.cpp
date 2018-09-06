@@ -5,6 +5,8 @@
 #include "Utils.h"
 // #include <cassert>
 
+#define intclamp(a, mi,ma)      min(max(a,mi),ma)         // clamp: Clamp value into set range.
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -41,11 +43,6 @@ FEATURES TO IMPLEMENT:
 
 // **** GLOBAL DATA ****
 
-bool P1OnLeftSideOfClipPlane = false;
-bool P2OnLeftSideOfClipPlane = false;
-bool P1OnRightSideOfClipPlane = false;
-bool P2OnRightSideOfClipPlane = false;
-
 
 int TickCount = 0, PreviousTickCount, fps, TickDelta; // used for fps monitor
 
@@ -63,7 +60,7 @@ float StandingHeight = 10 * HalfWindowHeight; // standing height.
 
 float PlayerHeight = StandingHeight; // Start standing.
 Player player = { 25.0, 25.0 }; // Could be moved to vec2 but we'll keep it in it's own structure in case I expand definition. Starting pos. defined.
-float Angle = M_PI; // starting angle for player.
+float Angle = 0.00f; // starting angle for player.
 
 
 
@@ -106,7 +103,7 @@ int WallNo; // Used to track which wall we are processing.  Debugging only.
 int WallLightingIndexMin = 0, WallLightingIndexMax = 0;
 float d_TotalWallWidth = 0;
 float WallStep = 0;
-float debug1 = 0.0f, debug2 = 0.0f, debug3 = 0.0f; //generic debug vars
+float debug1 = 0.0f, debug2 = 0.0f, debug3 = 0.0f, debug4 = 0.0f; //generic debug vars
 
 
 bool LoadResources() // Map, Textures, sounds etc.
@@ -142,7 +139,7 @@ bool LoadResources() // Map, Textures, sounds etc.
 }
 
 
-inline SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel color from given surface & xy coords.
+inline SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get pixel color from given surface & xy coords.  Assumes unlocked surface.
 {
 	SDL_Color ReturnColor;
 
@@ -159,7 +156,6 @@ inline SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get 
 	ReturnColor.r = PixelData[PixelIndexR];
 	ReturnColor.g = PixelData[PixelIndexG];
 	ReturnColor.b = PixelData[PixelIndexB];
-	ReturnColor.a = 255;
 
 
 
@@ -207,8 +203,8 @@ void HandleInput()
 	}
 	if (keystate[SDL_SCANCODE_W])
 	{
-		player.x += cos(Angle);
-		player.y -= sin(Angle);
+		player.x += cos(Angle) * 0.1;
+		player.y -= sin(Angle) * 0.1;
 		if (IsPlayerCollidingWithWall())
 		{
 			player = CurrentPos;
@@ -392,15 +388,15 @@ void DrawDebugText()
 {
 	// Draw info text
 	sprintf(message,
-		"FPS: %d \n",
-		/*"Player X is %.2f, Player Y is %.2f. \n"
-		"Angle is %.2f degrees or %.2f rads. Cosine (x) is %.2f. Sine (y) is %.2f. \n\n"
-		" Debug1: %.2f Debug2: %.2f Debug3: L1: %d L2: %d R1: %d R2: %d \n\n"
-		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light (disabled for now), left ctrl to crouch\nPress q to quit.",*/
-		fps
-		/*player.x, player.y, //Player position
-		fmod(Angle, 6.28) * 180 / 3.1415926, Angle, cos(Angle), sin(Angle),
-		debug1, debug2, P1OnLeftSideOfClipPlane, P2OnLeftSideOfClipPlane, P1OnRightSideOfClipPlane, P2OnRightSideOfClipPlane*/
+		"FPS: %d \n"
+		"Player X is %.2f, Player Y is %.2f. \n"
+		"Angle is %.2f degrees or %.2f rads. \n\n"
+		" Debug1: %.2f Debug2: %.2f Debug3:  %.2f  Debug4:  %.2f \n\n"
+		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light (disabled for now), left ctrl to crouch\nPress q to quit.",
+		fps,
+		player.x, player.y, //Player position
+		fmod(Angle, 6.28) * 180 / 3.1415926, Angle,
+		debug1, debug2, debug3, debug4
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -584,10 +580,10 @@ void RenderDebug(WallLine wallLine)
 	Vector2 LeftSideClipLineP1 = { (float)0.0001, (float)0.0001 };
 	Vector2 LeftSideClipLineP2 = { (HalfViewWidth / 2), (float)HalfViewHeight };
 
-	P1OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-	P2OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
-	P1OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-	P2OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+	bool P1OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+	bool P2OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+	bool P1OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+	bool P2OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
 
 	bool LineBehindPlayer = false;
 	bool LineOutOfFOV = false; // Line can be in FOV but behind the player due to the way 'LineSide' works so account for this with above bool 'LineBehindPlayer'.
@@ -697,10 +693,10 @@ void RenderWall(WallLine wallLine)
 		Vector2 LeftSideClipLineP1 = { (float)0.0001, (float)0.0001 };
 		Vector2 LeftSideClipLineP2 = { (HalfViewWidth / 2), (float)HalfViewHeight };
 
-		P1OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-		P2OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
-		P1OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
-		P2OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+		bool P1OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+		bool P2OnLeftSideOfClipPlane = LineSide(LeftSideClipLineP1, LeftSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
+		bool P1OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP1.x, TransformedLineP1.z));
+		bool P2OnRightSideOfClipPlane = !LineSide(RightSideClipLineP1, RightSideClipLineP2, Vector2(TransformedLineP2.x, TransformedLineP2.z));
 
 		bool LineBehindPlayer = false;
 		bool LineOutOfFOV = false; // Line can be in FOV but behind the player due to the way 'LineSide' works so account for this with above bool 'LineBehindPlayer'.
@@ -815,7 +811,13 @@ void RenderWall(WallLine wallLine)
 
 			bool bFirstRun = true;
 			
-			for (int cl = LeftMostWall; cl <= RightMostWall; ++cl) // Loop over each x position of the wall. cl = current vertical line
+			// const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format);
+			// const char* surfacePixelFormatName2 = SDL_GetPixelFormatName(g_surface->format->format);
+
+			Uint8* SurfacePixels = (Uint8*) g_surface->pixels;
+			
+
+			for (int cl = LeftMostWall; cl < RightMostWall ; ++cl) // Loop over each x position of the wall. cl = current vertical line
 			{
 				if (cl % 64 == 0)
 				{
@@ -916,10 +918,12 @@ void RenderWall(WallLine wallLine)
 				YDeltaBottom = (cl - LeftMostWall) * (HeightDeltaBottom / WallWidth); // Calculate the change in Y position for the current vertical line.  Used for the floor vertical line.
 
 				float WallDrawTop = Wall.y1a + YDeltaTop; // Calculate the Y position to draw the vertical ceiling line to.
-				
+				float TrimmedTop = 0.0f;
+				float TrimmedBottom = 0.0f;
+
 				if (WallDrawTop < -HalfWindowHeight) // Set a minimum for this value to ensure vertical ceiling line at least starts at the top of the viewport and is not drawn above that (non-visible area)
 				{
-
+					TrimmedTop = -HalfWindowHeight - WallDrawTop;
 					WallDrawTop = -HalfWindowHeight;
 				}
 
@@ -927,6 +931,7 @@ void RenderWall(WallLine wallLine)
 				
 				if (WallDrawBottom > HalfWindowHeight) // Same as above but sets a maximum.
 				{
+					//TrimmedBottom = WallDrawBottom - HalfWindowHeight;
 					WallDrawBottom = HalfWindowHeight;
 				}
 
@@ -954,34 +959,48 @@ void RenderWall(WallLine wallLine)
 
 				// Y value code
 				int TotalWallVlineHeight = WallDrawBottom - WallDrawTop;
-				float VLineToTextureSizeRatio = (float)WallTextureSize / (float)TotalWallVlineHeight;
+				float WallTextureVlineMinValue = (TrimmedTop / ( TotalWallVlineHeight + TrimmedTop)) * WallTextureSize; // Used to set a minimum y value in texture space if the wall is getting clipped due to being above the FOV
+				//float WallTextureVlineMaxValue = (TrimmedBottom / (TotalWallVlineHeight + TrimmedTop - TrimmedBottom)) * WallTextureSize; // Used to set a maximum y value in texture space if the wall is getting clipped due to being below the FOV
+				float VLineToTextureSizeRatio = (float)WallTextureSize / (float)(TotalWallVlineHeight + TrimmedTop + TrimmedBottom);
 
 				if (DrawingLastWall)
 				{
 					DrawingLastWall = false;
 
-					debug1 = VLineToTextureSizeRatio;
-					debug2 = WallWidth;
-					debug3 = 0;
+					//debug1 = WallTextureVlineMaxValue;
+					//debug2 = 64 - (WallTextureVlineMinValue + WallTextureVlineMaxValue);
+					//debug3 = WallTextureVlineMinValue + (float)0.0 * (float)VLineToTextureSizeRatio - WallTextureVlineMaxValue;
+					//debug4 = WallTextureVlineMinValue + (float)TotalWallVlineHeight * (float)VLineToTextureSizeRatio - WallTextureVlineMaxValue;
 
 				}
 
-
+				
+				// int xval = Clamp(xval)
+				int xval = intclamp(HalfWindowWidth + cl,0, 1279) * 4;
+				
 				for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
 				{
 					// get color to render to wall from wall texture.
 
-					SDL_Color CurrentPixelColor = GetPixelFromTexture(WallTextureSurface, CurrentXValOfWallTexture, (float)CurrentWallVlineYPosition * (float)VLineToTextureSizeRatio);
+					SDL_Color CurrentPixelColor = GetPixelFromTexture(WallTextureSurface, CurrentXValOfWallTexture, WallTextureVlineMinValue + (float)CurrentWallVlineYPosition * (float)VLineToTextureSizeRatio);
 					
 					
-					
-					// SDL_SetRenderDrawColor(g_renderer, CurrentPixelColor.r, CurrentPixelColor.g, CurrentPixelColor.b, 255);
-					SDL_SetRenderDrawColor(g_renderer, CurrentPixelColor.r * LightScaler, CurrentPixelColor.g * LightScaler, CurrentPixelColor.b * LightScaler, 255);
-					SDL_RenderDrawPoint(g_renderer, HalfWindowWidth + cl, HalfWindowHeight + WallDrawTop + CurrentWallVlineYPosition);
+					int yval = HalfWindowHeight + WallDrawTop + CurrentWallVlineYPosition;
 
-					// Use g_surface = SDL_GetWindowSurface(g_window); at some point instead of this slow method.
+					int PixelLocation = (yval * g_surface->pitch) + xval;
+					
 
-					//DrawLineWithOffset(HalfWindowWidth  + cl, HalfWindowHeight + WallDrawTop, HalfWindowWidth  + cl, HalfWindowHeight + WallDrawBottom, Offset);
+					SurfacePixels[PixelLocation] = CurrentPixelColor.b * LightScaler;
+					SurfacePixels[PixelLocation+1] = CurrentPixelColor.g * LightScaler;
+					SurfacePixels[PixelLocation+2] = CurrentPixelColor.r  * LightScaler;
+					
+					
+					// SDL_SetRenderDrawColor(g_renderer, CurrentPixelColor.r * LightScaler, CurrentPixelColor.g * LightScaler, CurrentPixelColor.b * LightScaler, 255);
+					// SDL_RenderDrawPoint(g_renderer, HalfWindowWidth + cl, HalfWindowHeight + WallDrawTop + CurrentWallVlineYPosition);
+
+					
+
+					
 				} 
 
 
@@ -1057,18 +1076,18 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 
 
 	// Set color to white & clear
-	SDL_SetRenderDrawColor(g_renderer, 64, 64, 64, 255);
+	SDL_SetRenderDrawColor(g_renderer, 65, 64, 63, 255);
 	SDL_RenderClear(g_renderer);
 
 	MoveLight();
 
 	// RenderWalls
 	SDL_LockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
-	// SDL_LockSurface(g_surface);
+	SDL_LockSurface(g_surface);
 
 	// Uint8* BMPPixelData = (Uint8*)BMPSurface->pixels; // get raw pixel data in weird format.
-	// const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format);
-	// const char* surfacePixelFormatName2 = SDL_GetPixelFormatName(g_surface->format->format);
+	const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format);
+	const char* surfacePixelFormatName2 = SDL_GetPixelFormatName(g_surface->format->format);
 
 	for (auto& wall : AllWalls)
 	{
@@ -1081,7 +1100,7 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 	}
 	
 	SDL_UnlockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
-	// SDL_UnlockSurface(g_surface);
+	SDL_UnlockSurface(g_surface);
 	// Render debug viewports
 
 	DrawViews();
@@ -1115,7 +1134,10 @@ int main(int argc, char * argv[])
 		SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window creation fail : %s\n", SDL_GetError());
 		ContinueGame = false;
 	}
+
+
 	g_surface = SDL_GetWindowSurface(g_window);
+
 	g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE); //SDL_RENDERER_ACCELERATED // SDL_RENDERER_SOFTWARE
 
 	if (!g_renderer) {
