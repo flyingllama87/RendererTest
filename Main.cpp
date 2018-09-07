@@ -367,13 +367,13 @@ void DrawDebugText()
 		"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. \n\n"
 		//" Debug1: %.2f Debug2: %.2f Debug3:  %.2f  Debug4:  %.2f \n\n"
-		//" debugstr1: %s debugstr2: %s\n\n"
+		" debugstr1: %s debugstr2: %s\n\n"
 		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, left ctrl to crouch\nPress q to quit.",
 		fps,
 		player.x, player.y, //Player position
-		fmod(Angle, 6.28) * 180 / 3.1415926, Angle
+		fmod(Angle, 6.28) * 180 / 3.1415926, Angle,
 		//debug1, debug2, debug3, debug4,
-		//surfacePixelFormatName, surfacePixelFormatName2
+		surfacePixelFormatName, surfacePixelFormatName2
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -754,8 +754,13 @@ void RenderWall(WallLine wallLine)
 			// const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format);
 			// const char* surfacePixelFormatName2 = SDL_GetPixelFormatName(g_surface->format->format);
 
+
+			// These only really need to be generated once per wall
 			Uint8* SurfacePixels = (Uint8*) g_surface->pixels;
-			
+			Uint8* WallTexturePixels = (Uint8*)WallTextureSurface->pixels;
+			int WallLineTextureLength = 8 * AbsoluteLineLength; // Acquire full length of wall
+			int WallTextureSize = WallTextureSurface->w;
+
 
 			for (int cl = LeftMostWall; cl < RightMostWall ; ++cl) // Loop over each x position of the wall. cl = current vertical line
 			{
@@ -871,7 +876,7 @@ void RenderWall(WallLine wallLine)
 				
 				if (WallDrawBottom > HalfWindowHeight) // Same as above but sets a maximum.
 				{
-					//TrimmedBottom = WallDrawBottom - HalfWindowHeight;
+					TrimmedBottom = WallDrawBottom - HalfWindowHeight;
 					WallDrawBottom = HalfWindowHeight;
 				}
 
@@ -886,23 +891,23 @@ void RenderWall(WallLine wallLine)
 
 
 
-				int WallLineTextureLength = 8 * AbsoluteLineLength; // Acquire full length of wall
 
-				int WallTextureSize = WallTextureSurface->w;
 				// float WallLineTextureLength = WallLineLength - (WallLineLength % WallTextureSize); // Align to 64 pixels just to see how it looks
 
 				// X val code
-				int CurrentXValOfWall = cl - (int)LeftMostWall;
-				int CurrentXValOfWallStartMod =  (int)((float)WallLineTextureLength * PercentageLeftLineTrim) % WallTextureSize;
-				CurrentXValOfWall = CurrentXValOfWall * ((WallLineTextureLength * PercentageOfWallInFOV) / WallWidth);
-				float CurrentXValOfWallTexture = (CurrentXValOfWall + CurrentXValOfWallStartMod) % WallTextureSize; // Tile texture horizontally across the entire wall every time we get to the end of the WallTexture
+				int CurrentXValOfWall = cl - (int)LeftMostWall; // Current X coord of wall starting from 0 as opposed to some negative value
+				int CurrentXValOfWallStart =  (int)((float)WallLineTextureLength * PercentageLeftLineTrim) % WallTextureSize; // If the wall is being clipped by the left side of the screen, find the appropriate start X co-ord for the texture
+				CurrentXValOfWall = CurrentXValOfWall * ((WallLineTextureLength * PercentageOfWallInFOV) / WallWidth);  // Find the ratio of how much of the wall texture to use based on how much of the wall is in the FOV compared to the total width of the wall being drawn.
+				float CurrentXValOfWallTexture = (CurrentXValOfWall + CurrentXValOfWallStart) % WallTextureSize; // Find the X value to use to draw the wall in texture space.  Modulo so we tile texture horizontally across the entire wall every time we get to the end of the WallTexture
 
 				// Y value code
-				int TotalWallVlineHeight = WallDrawBottom - WallDrawTop;
-				float WallTextureVlineMinValue = (TrimmedTop / ( TotalWallVlineHeight + TrimmedTop)) * WallTextureSize; // Used to set a minimum y value in texture space if the wall is getting clipped due to being above the FOV
-				//float WallTextureVlineMaxValue = (TrimmedBottom / (TotalWallVlineHeight + TrimmedTop - TrimmedBottom)) * WallTextureSize; // Used to set a maximum y value in texture space if the wall is getting clipped due to being below the FOV
-				float VLineToTextureSizeRatio = (float)WallTextureSize / (float)(TotalWallVlineHeight + TrimmedTop + TrimmedBottom);
+				int TotalWallVlineHeight = WallDrawBottom - WallDrawTop; // Total height of the column being drawn.
+				float WallTextureVlineMinValue = (TrimmedTop / ( TotalWallVlineHeight + TrimmedTop + TrimmedBottom)) * WallTextureSize; // Used to set a minimum y value in texture space if the wall is getting clipped due to being above the FOV
+				float WallTextureVlineMaxValueRatio = ((TrimmedTop + TotalWallVlineHeight) / (TotalWallVlineHeight + TrimmedTop + TrimmedBottom)); // Used to find the ratio used to set a maximum y value in texture space if the wall is getting clipped due to being below the FOV
+				float VLineToTextureSizeRatio = (float)WallTextureSize / (float)(TotalWallVlineHeight + TrimmedTop + TrimmedBottom); // Used to find the ratio between the Wall Texture Size & the total height of the wall.
+				VLineToTextureSizeRatio *= WallTextureVlineMaxValueRatio; // Used to both limit the maximum value (in texture space) of the y co-ord of the wall being drawn in addition to squashing all 
 
+				/*
 				if (DrawingLastWall)
 				{
 					DrawingLastWall = false;
@@ -912,31 +917,40 @@ void RenderWall(WallLine wallLine)
 					//debug3 = WallTextureVlineMinValue + (float)0.0 * (float)VLineToTextureSizeRatio - WallTextureVlineMaxValue;
 					//debug4 = WallTextureVlineMinValue + (float)TotalWallVlineHeight * (float)VLineToTextureSizeRatio - WallTextureVlineMaxValue;
 
-				}
+				}*/
 
 				
-				// int xval = Clamp(xval)
 				int xval = Clamp(HalfWindowWidth + cl,0, WindowWidth-1) * 4;
 				
 				for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
 				{
 					// get color to render to wall from wall texture.
 
-					SDL_Color CurrentPixelColor = GetPixelFromTexture(WallTextureSurface, CurrentXValOfWallTexture, WallTextureVlineMinValue + (float)CurrentWallVlineYPosition * (float)VLineToTextureSizeRatio);
-					
+					//SDL_Color CurrentPixelColor = GetPixelFromTexture(WallTextureSurface, CurrentXValOfWallTexture, (WallTextureVlineMinValue + (float)CurrentWallVlineYPosition * (float)VLineToTextureSizeRatio));
+
+					int PixelRow = (WallTextureSurface->pitch * (int)(WallTextureVlineMinValue + (float)CurrentWallVlineYPosition * (float)VLineToTextureSizeRatio));
+					int PixelColumn = WallTextureSurface->format->BytesPerPixel * CurrentXValOfWallTexture;
+					int PixelIndexR = PixelRow + PixelColumn;
+					int PixelIndexG = PixelRow + PixelColumn + 1;
+					int PixelIndexB = PixelRow + PixelColumn + 2;
+
+					Uint8 r = WallTexturePixels[PixelIndexR];
+					Uint8 g = WallTexturePixels[PixelIndexG];
+					Uint8 b = WallTexturePixels[PixelIndexB];
+
 					
 					int yval = HalfWindowHeight + WallDrawTop + CurrentWallVlineYPosition;
 
 					int PixelLocation = (yval * g_surface->pitch) + xval;
 					
 #ifdef __EMSCRIPTEN__
-					SurfacePixels[PixelLocation] = CurrentPixelColor.r  * LightScaler;
-					SurfacePixels[PixelLocation + 1] = CurrentPixelColor.g * LightScaler;
-					SurfacePixels[PixelLocation + 2] =  CurrentPixelColor.b * LightScaler;
+					SurfacePixels[PixelLocation] = r  * LightScaler;
+					SurfacePixels[PixelLocation + 1] = g * LightScaler;
+					SurfacePixels[PixelLocation + 2] =  b * LightScaler;
 #else
-					SurfacePixels[PixelLocation] = CurrentPixelColor.b * LightScaler;
-					SurfacePixels[PixelLocation + 1] = CurrentPixelColor.g * LightScaler;
-					SurfacePixels[PixelLocation + 2] = CurrentPixelColor.r  * LightScaler;
+					SurfacePixels[PixelLocation] = b * LightScaler;
+					SurfacePixels[PixelLocation + 1] = g * LightScaler;
+					SurfacePixels[PixelLocation + 2] = r  * LightScaler;
 #endif
 
 
@@ -1023,8 +1037,6 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 	// RenderWalls
 	SDL_LockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
 	SDL_LockSurface(g_surface);
-
-
 
 	for (auto& wall : AllWalls)
 	{

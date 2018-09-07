@@ -18,6 +18,7 @@ extern SDL_Window *g_window;
 extern SDL_Renderer *g_renderer;
 extern SDL_Surface *g_surface;
 
+
 extern SDL_Event event; // Used for tracking SDL events.
 
 extern Player player;
