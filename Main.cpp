@@ -5,14 +5,14 @@
 #include "Utils.h"
 // #include <cassert>
 
-#define intclamp(a, mi,ma)      min(max(a,mi),ma)         // clamp: Clamp value into set range.
+
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
-#define WindowWidth 1280
-#define WindowHeight 720
+#define WindowWidth 1920
+#define WindowHeight 1080
 #define HalfWindowHeight WindowHeight/2
 #define HalfWindowWidth WindowWidth/2
 
@@ -21,15 +21,11 @@ WARNING:  This code is messy & purely PoC.  You've been warned.
 
 TO DO:
 - Code clean up & break program into separate files.
-- Better clipping.
 - Make mobile friendly?
 
 FEATURES TO IMPLEMENT:
 - Optomisation - Draw rects where possible, remove divides (calc reciprocal once?), avoid squares,
-- interpolate between wall light values
 - Draw Light box instead of a single pixel.
-- Texture Mapping
-- Per VLine Lighting
 - Quadratic lighting falloff? (y = -x^2 + c)?
 - Reading sectors from text file (duke3d/build format?)
 - Wall Height.
@@ -104,6 +100,9 @@ int WallLightingIndexMin = 0, WallLightingIndexMax = 0;
 float d_TotalWallWidth = 0;
 float WallStep = 0;
 float debug1 = 0.0f, debug2 = 0.0f, debug3 = 0.0f, debug4 = 0.0f; //generic debug vars
+char* surfacePixelFormatName;
+char* surfacePixelFormatName2;
+
 
 
 bool LoadResources() // Map, Textures, sounds etc.
@@ -143,7 +142,6 @@ inline SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get 
 {
 	SDL_Color ReturnColor;
 
-
 	Uint8* PixelData = (Uint8*)Surface->pixels;
 
 	int PixelRow = (Surface->pitch * y);
@@ -152,12 +150,9 @@ inline SDL_Color GetPixelFromTexture(SDL_Surface *Surface, int x, int y) // Get 
 	int PixelIndexG = PixelRow + PixelColumn + 1;
 	int PixelIndexB = PixelRow + PixelColumn + 2;
 
-
 	ReturnColor.r = PixelData[PixelIndexR];
 	ReturnColor.g = PixelData[PixelIndexG];
 	ReturnColor.b = PixelData[PixelIndexB];
-
-
 
 	return ReturnColor;
 
@@ -172,7 +167,6 @@ void HandleInput()
 		SDL_PumpEvents();
 
 	Player CurrentPos = player; // Store current, valid player position in case new position is invalid / outside of sector.
-
 
 	// Keyboard input
 	const Uint8 *keystate = SDL_GetKeyboardState(NULL);
@@ -250,20 +244,6 @@ void HandleInput()
 		Angle += 1.0 / (180 / M_PI);
 	if (keystate[SDL_SCANCODE_Y])
 		Angle += 0.000001 / (180 / M_PI);
-	if (keystate[SDL_SCANCODE_K])
-	{
-		if (LightPos.x > 0 && LightPos.x <= 100)
-			LightPos.x += 1;
-		else if (LightPos.x > 100)
-			LightPos.x = 1;
-	}
-	if (keystate[SDL_SCANCODE_L])
-	{
-		if (LightPos.y > 0 && LightPos.y <= 50)
-			LightPos.y += 1;
-		else if (LightPos.y > 50)
-			LightPos.y = 1;
-	}
 	if (keystate[SDL_SCANCODE_LCTRL])
 		PlayerHeight = CrouchingHeight;
 	if (!keystate[SDL_SCANCODE_LCTRL])
@@ -278,12 +258,12 @@ void HandleInput()
 
 void MoveLight()
 {
-	LightingUpdateThreshold += TickDelta;
+	//LightingUpdateThreshold += TickDelta;
 	CurrentLerpInterval += TickDelta;
 
-	if (LightingUpdateThreshold > 100)
-	{
-		LightingUpdateThreshold = 0;
+	//if (LightingUpdateThreshold > 100)
+	//{
+	//	LightingUpdateThreshold = 0;
 
 		float t = (float)CurrentLerpInterval / (float)TotalLerpInterval;
 
@@ -301,10 +281,7 @@ void MoveLight()
 			bReverseDirection = !bReverseDirection;
 			CurrentLerpInterval = 0;
 		}
-	}
-
-
-
+	//}
 
 }
 
@@ -319,15 +296,13 @@ void CountFPSAndLimit()
 
 	int DelayTicks = 0;
 
-	if (TickDelta <= 16) // Limit FPS to about 60fps.
+	if (TickDelta <= 16) // Limit FPS to about 60 fps.
 	{
 		DelayTicks = 16 - TickDelta;
 		SDL_Delay(DelayTicks);
 	}
 
 	fps = 1000 / (TickDelta + DelayTicks);
-
-
 }
 
 
@@ -375,7 +350,7 @@ void DrawViews()
 	DrawLineWithOffset(HalfViewWidth + 0.0001, HalfViewHeight - 0.0001, HalfViewWidth + 60, HalfViewHeight - 2, Offset);
 
 	// Change render colour to a light blue for viewplane trim
-	SDL_SetRenderDrawColor(g_renderer, 128, 128, 256, 128);
+	SDL_SetRenderDrawColor(g_renderer, 128, 128, 255, 128);
 
 	// Draw intersect line
 	DrawLineWithOffset(HalfViewWidth + -0.0001, HalfViewHeight - 0.0001, HalfViewWidth + -(HalfViewWidth / 2), HalfViewHeight - HalfViewHeight, Offset);
@@ -391,12 +366,14 @@ void DrawDebugText()
 		"FPS: %d \n"
 		"Player X is %.2f, Player Y is %.2f. \n"
 		"Angle is %.2f degrees or %.2f rads. \n\n"
-		" Debug1: %.2f Debug2: %.2f Debug3:  %.2f  Debug4:  %.2f \n\n"
-		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, k & l to move the light (disabled for now), left ctrl to crouch\nPress q to quit.",
+		//" Debug1: %.2f Debug2: %.2f Debug3:  %.2f  Debug4:  %.2f \n\n"
+		//" debugstr1: %s debugstr2: %s\n\n"
+		"Move with arrow keys / ADSW, r to reset position, e to turn 1 degree, t to turn 45 degrees, left ctrl to crouch\nPress q to quit.",
 		fps,
 		player.x, player.y, //Player position
-		fmod(Angle, 6.28) * 180 / 3.1415926, Angle,
-		debug1, debug2, debug3, debug4
+		fmod(Angle, 6.28) * 180 / 3.1415926, Angle
+		//debug1, debug2, debug3, debug4,
+		//surfacePixelFormatName, surfacePixelFormatName2
 	);
 
 	// Create surfaces, texture & rect needed for text rendering
@@ -535,43 +512,6 @@ void RenderDebug(WallLine wallLine)
 	// calculate x position of verticies based on where the player is looking
 	TransformedLineP1.x = TransformedLineP1.y * cos(Angle) - TransformedLineP1.x * sin(Angle);
 	TransformedLineP2.x = TransformedLineP2.y * cos(Angle) - TransformedLineP2.x * sin(Angle);
-	
-	/*
-	IntersectPoint1 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, -0.0001, 0.0001, -60, 2);
-	IntersectPoint2 = Intersect(TransformedLineP1.x, TransformedLineP1.z, TransformedLineP2.x, TransformedLineP2.z, 0.0001, 0.0001, 60, 2);
-
-	// If the line is partially behind the player (crosses the viewplane, clip it)
-
-	if (TransformedLineP1.z <= 0.0) // If PT1 is behind the player
-	{
-
-		if (IntersectPoint1.y > 0.0)
-		{
-			TransformedLineP1.x = IntersectPoint1.x;
-			TransformedLineP1.z = IntersectPoint1.y;
-		}
-		else
-		{
-			TransformedLineP1.x = IntersectPoint2.x;
-			TransformedLineP1.z = IntersectPoint2.y;
-		}
-	}
-
-	if (TransformedLineP2.z <= 0.0) // If PT2 is behind the player
-	{
-
-		if (IntersectPoint1.y > 0.0)
-		{
-			TransformedLineP2.x = IntersectPoint1.x;
-			TransformedLineP2.z = IntersectPoint1.y;
-		}
-		else
-		{
-			TransformedLineP2.x = IntersectPoint2.x;
-			TransformedLineP2.z = IntersectPoint2.y;
-		}
-	} */
-
 	
 	
 	Vector2 RightSideClipLineP1 = { (float)-0.0001, (float)0.0001 };
@@ -976,7 +916,7 @@ void RenderWall(WallLine wallLine)
 
 				
 				// int xval = Clamp(xval)
-				int xval = intclamp(HalfWindowWidth + cl,0, 1279) * 4;
+				int xval = Clamp(HalfWindowWidth + cl,0, WindowWidth-1) * 4;
 				
 				for (int CurrentWallVlineYPosition = 0; CurrentWallVlineYPosition < TotalWallVlineHeight; CurrentWallVlineYPosition++)
 				{
@@ -989,18 +929,17 @@ void RenderWall(WallLine wallLine)
 
 					int PixelLocation = (yval * g_surface->pitch) + xval;
 					
-
+#ifdef __EMSCRIPTEN__
+					SurfacePixels[PixelLocation] = CurrentPixelColor.r  * LightScaler;
+					SurfacePixels[PixelLocation + 1] = CurrentPixelColor.g * LightScaler;
+					SurfacePixels[PixelLocation + 2] =  CurrentPixelColor.b * LightScaler;
+#else
 					SurfacePixels[PixelLocation] = CurrentPixelColor.b * LightScaler;
-					SurfacePixels[PixelLocation+1] = CurrentPixelColor.g * LightScaler;
-					SurfacePixels[PixelLocation+2] = CurrentPixelColor.r  * LightScaler;
-					
-					
-					// SDL_SetRenderDrawColor(g_renderer, CurrentPixelColor.r * LightScaler, CurrentPixelColor.g * LightScaler, CurrentPixelColor.b * LightScaler, 255);
-					// SDL_RenderDrawPoint(g_renderer, HalfWindowWidth + cl, HalfWindowHeight + WallDrawTop + CurrentWallVlineYPosition);
+					SurfacePixels[PixelLocation + 1] = CurrentPixelColor.g * LightScaler;
+					SurfacePixels[PixelLocation + 2] = CurrentPixelColor.r  * LightScaler;
+#endif
 
-					
 
-					
 				} 
 
 
@@ -1075,7 +1014,7 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 
 
 
-	// Set color to white & clear
+	// Set clear background & make it grey
 	SDL_SetRenderDrawColor(g_renderer, 65, 64, 63, 255);
 	SDL_RenderClear(g_renderer);
 
@@ -1085,9 +1024,7 @@ void MainLoop() // Primary game loop.  Structured in this way (separate function
 	SDL_LockSurface(WallTextureSurface); // Lock surface so we can access raw pixel data.
 	SDL_LockSurface(g_surface);
 
-	// Uint8* BMPPixelData = (Uint8*)BMPSurface->pixels; // get raw pixel data in weird format.
-	const char* surfacePixelFormatName = SDL_GetPixelFormatName(WallTextureSurface->format->format);
-	const char* surfacePixelFormatName2 = SDL_GetPixelFormatName(g_surface->format->format);
+
 
 	for (auto& wall : AllWalls)
 	{
@@ -1153,6 +1090,9 @@ int main(int argc, char * argv[])
 		ContinueGame = false;
 	}
 
+	//Temp debug stuff
+	surfacePixelFormatName = (char *)SDL_GetPixelFormatName(WallTextureSurface->format->format);
+	surfacePixelFormatName2 = (char *)SDL_GetPixelFormatName(g_surface->format->format);
 
 #ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop(MainLoop, -1, 1);

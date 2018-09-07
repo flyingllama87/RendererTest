@@ -119,8 +119,6 @@ typedef struct WallLine // Wall points (defined in absolute/top view) & wall col
 
 // **** FUNCTION DECLARATIONS ****
 
-// bool LoadMap();
-
 void RenderWall(WallLine wallLine);
 void RenderDebug(WallLine wallLine);
 
@@ -133,23 +131,18 @@ void DrawPixelWithScaleAndOffset(float scale, float x, float y, SDL_Point offset
 // Generic math functions
 float Dot(Vector2 first, Vector2 second); // Calculate vector2 dot product.
 Vector3 Cross(Vector3 first, Vector3 second); // Calculate Vector 3 cross product.
-float Clamp(float Clampee, float MinVal, float MaxVal);
+// float Clamp(float Clampee, float MinVal, float MaxVal);
 Vector2 Intersect(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 Vector2 IntersectLineSegs(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4);
 float Determinate(float x1, float y1, float x2, float y2);
 
 #define min(a,b) (((a) < (b)) ? (a) : (b)) // min: Choose smaller of two scalars.
 #define max(a,b) (((a) > (b)) ? (a) : (b)) // max: Choose greater of two scalars.
+#define Clamp(clampee, minVal,maxVal)      min(max(clampee,minVal),maxVal)         // clamp: Clamp value into set range.
 
-Vector2 Lerp(Vector2 Start, Vector2 End, float t);
 
 // Physics functions
 bool LineSide(Vector2 LinePt1, Vector2 LinePt2, Vector2 Point);
 bool PlayerInBounds(Vector2 WallPt1, Vector2 WallPt2);
 bool IsPlayerCollidingWithWall();
-
-/*Vector2 lineSegmentIntersection(
-	double Ax, double Ay,
-	double Bx, double By,
-	double Cx, double Cy,
-	double Dx, double Dy);*/
+Vector2 Lerp(Vector2 Start, Vector2 End, float t);

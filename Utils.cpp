@@ -113,14 +113,14 @@ Vector3 Cross(Vector3 first, Vector3 second)
 	return ReturnVector;
 }
 
-float Clamp(float Clampee, float MinVal, float MaxVal)
+/*float Clamp(float Clampee, float MinVal, float MaxVal)
 {
 	if (Clampee < MinVal)
 		Clampee = MinVal;
 	if (Clampee > MaxVal)
 		Clampee = MaxVal;
 	return Clampee;
-}
+}*/
 
 // ** GENERIC PHYSICS FUNCTIONS **
 
