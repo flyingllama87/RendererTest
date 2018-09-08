@@ -8,7 +8,7 @@
 
 // *** GLOBAL DATA ***
 
-SDL_Color colorRed = { 255, 0, 0, 255 }; // used for text
+SDL_Color colorRed = { 255, 0, 0, 255 }; // used for debug text
 
 // SDL vars:
 TTF_Font *font;
@@ -113,7 +113,7 @@ Vector3 Cross(Vector3 first, Vector3 second)
 	return ReturnVector;
 }
 
-/*float Clamp(float Clampee, float MinVal, float MaxVal)
+/*float Clamp(float Clampee, float MinVal, float MaxVal) // Moved to macro so it works for both floats and ints inline
 {
 	if (Clampee < MinVal)
 		Clampee = MinVal;
