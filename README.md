@@ -11,6 +11,9 @@ http://morganrobertson.net/wasm/bisqwit.html
 Bisqwit's original video that started this quest for knowledge:
 https://www.youtube.com/watch?v=HQYsFshbkYw
 
+*Update:* You can find an updated version of the renderer with texture mapping, touch controls, lighting and more at:
+http://morganrobertson.net/wasm/Render.html 
+
 After I watched this video I looked at the qbasic code and was surprised by the simplicity of rendering a pseudo 3d first person perspective. 
 
 The problem was that I had no idea about any of the math.  I hope this post provides some leads to a viewer like myself who didn't know where to start.
