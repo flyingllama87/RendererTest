@@ -3,7 +3,8 @@
 Here's my version of Bisqwit's QB vertrot (vertex rotation) test app ported to C/SDL, with many improvements & compiled to WebAssembly.
 
 This means it runs in the browser:
-http://morganrobertson.net/wasm/renderer.html
+http://morganrobertson.net/wasm/Render.html 
+
 
 Here's Bisqwit's full renderer in the browser:
 http://morganrobertson.net/wasm/bisqwit.html
@@ -11,8 +12,8 @@ http://morganrobertson.net/wasm/bisqwit.html
 Bisqwit's original video that started this quest for knowledge:
 https://www.youtube.com/watch?v=HQYsFshbkYw
 
-*Update:* You can find an updated version of the renderer with texture mapping, touch controls, lighting and more at:
-http://morganrobertson.net/wasm/Render.html 
+You can find an older version that provides a better view of what's happening internally here:
+http://morganrobertson.net/wasm/renderer.html
 
 After I watched this video I looked at the qbasic code and was surprised by the simplicity of rendering a pseudo 3d first person perspective. 
 
